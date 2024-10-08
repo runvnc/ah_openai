@@ -1,15 +1,19 @@
 # ah_openai
 
-A module for OpenAI integration.
+A plugin module for OpenAI integration in the AgentHost (AH) framework.
+
+## About
+
+This plugin is designed to work with the AgentHost framework, which can be found at https://github.com/runvnc/ah.
 
 ## Installation
 
-You can install this package using pip:
+This plugin should be installed using the Plugin Manager on the AgentHost admin screen.
 
-```
-pip install ah_openai
-```
+## Features
+
+- Provides streaming text chat completion integration with OpenAI
 
 ## Usage
 
-Describe how to use your module here.
+Once installed via the Plugin Manager, the plugin will be automatically loaded by the AH system. Refer to the AgentHost documentation for specific usage instructions.
