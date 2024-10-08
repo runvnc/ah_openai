@@ -1,0 +1,11 @@
+{
+  "name": "OpenAI",
+  "version": "1.0.0",
+  "description": "OpenAI API",
+  "services": [
+    {
+      "name": "stream_chat",
+      "description": "Streaming text chat completion"
+    }
+  ]
+}
