@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ah_openai"
-version = "0.1.0"
+version = "1.0.0"
 description = "A module for OpenAI integration"
 requires-python = ">=3.7"
 dependencies = [
@@ -12,7 +12,3 @@ dependencies = [
     "python-dotenv",  # For handling environment variables
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest",
-]

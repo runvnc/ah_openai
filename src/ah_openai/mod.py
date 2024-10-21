@@ -8,7 +8,8 @@ client = openai.AsyncOpenAI()
 
 @service()
 async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperature=0.0, max_tokens=3724, num_gpu_layers=12):
-    print("stream_chat called")
+    # print in blue background with white text
+    print('\033[44m' + 'stream_chat called' + '\033[0m')
     print("model", model)
     try:
         if model == 'o1-preview' or model == 'o1-mini':
@@ -21,6 +22,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperatur
 
         if not model or model == '':
             model = 'chatgpt-4o-latest'
+        print("model = ", model)
         stream = await client.chat.completions.create(
             model="chatgpt-4o-latest",
             #model="o1-preview",
@@ -49,6 +51,8 @@ sync_client = OpenAI()
 async def sync_chat_o1(model, messages):
     messages_copy = messages.copy()
     messages_copy[0]['role'] = 'user'
+    # print in blue background with white text
+    print('\033[44m' + 'calling ' + model + '\033[0m')
     print("calling ", model)
     print("messages_copy", messages_copy)
     response = sync_client.chat.completions.create(
