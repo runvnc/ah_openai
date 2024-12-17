@@ -24,14 +24,14 @@ async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperatur
             model = 'chatgpt-4o-latest'
         print("model = ", model)
         stream = await client.chat.completions.create(
-            model="chatgpt-4o-latest",
+            model=model #"chatgpt-4o-latest",
             #model="o1-preview",
             stream=True,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens
         )
-
+        print("Opened stream with model: ", model)
         async def content_stream(original_stream):
             async for chunk in original_stream:
                 if os.environ.get('AH_DEBUG') == 'True':
