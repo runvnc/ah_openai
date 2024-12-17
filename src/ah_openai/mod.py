@@ -24,8 +24,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperatur
             model = 'chatgpt-4o-latest'
         print("model = ", model)
         stream = await client.chat.completions.create(
-            model=model, #"chatgpt-4o-latest",
-            #model="o1-preview",
+            model=model,
             stream=True,
             messages=messages,
             temperature=temperature,
