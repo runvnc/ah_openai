@@ -25,7 +25,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperatur
         print("model = ", model)
         if model.startswith('o1'):
             messages[0]['role'] = 'developer'
-            max_completion_tokens = 5000
+            #max_completion_tokens = 5000
             stream = await client.chat.completions.create(
                 model=model,
                 stream=True,
@@ -45,6 +45,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperatur
         async def content_stream(original_stream):
             async for chunk in original_stream:
                 if os.environ.get('AH_DEBUG') == 'True':
+                    print(chunk)
                     print('\033[92m' + str(chunk.choices[0].delta.content) + '\033[0m', end='')
 
                 yield chunk.choices[0].delta.content or ""
