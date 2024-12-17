@@ -30,7 +30,6 @@ async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperatur
                 model=model,
                 stream=True,
                 messages=messages,
-                temperature=temperature,
                 max_completion_tokens=max_tokens
             )
         else:
