@@ -23,6 +23,8 @@ async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperatur
         if not model or model == '':
             model = 'chatgpt-4o-latest'
         print("model = ", model)
+        if model.startswith('o1'):
+            messages[0]['role'] = 'developer'
         stream = await client.chat.completions.create(
             model=model,
             stream=True,
