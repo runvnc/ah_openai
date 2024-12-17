@@ -25,13 +25,23 @@ async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperatur
         print("model = ", model)
         if model.startswith('o1'):
             messages[0]['role'] = 'developer'
-        stream = await client.chat.completions.create(
-            model=model,
-            stream=True,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
+            max_completion_tokens = 5000
+            stream = await client.chat.completions.create(
+                model=model,
+                stream=True,
+                messages=messages,
+                temperature=temperature,
+                max_completion_tokens=max_tokens
+            )
+        else:
+            stream = await client.chat.completions.create(
+                model=model,
+                stream=True,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+             
         print("Opened stream with model: ", model)
         async def content_stream(original_stream):
             async for chunk in original_stream:
