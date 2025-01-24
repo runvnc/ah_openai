@@ -1,76 +1,93 @@
 from lib.providers.services import service
 import os
-import openai
+import base64
+from io import BytesIO
+from openai import AsyncOpenAI
+import json
 
-openai.api_key = os.environ.get("OPENAI_API_KEY")
- 
-client = openai.AsyncOpenAI()
+client = AsyncOpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY")
+)
+
+def concat_text_lists(message):
+    """Concatenate text lists into a single string"""
+    # if the message['content'] is a list
+    # then we need to concatenate the list into a single string
+    out_str = ""
+    if isinstance(message['content'], str):
+        return message
+    else:
+        for item in message['content']:
+            if isinstance(item, str):
+                out_str += item + "\n"
+            else:
+                out_str += item['text'] + "\n"
+    message.update({'content': out_str})
+    return message
 
 @service()
-async def stream_chat(model, messages=[], context=None, num_ctx=2048, temperature=0.0, max_tokens=3724, num_gpu_layers=12):
-    # print in blue background with white text
-    print('\033[44m' + 'stream_chat called' + '\033[0m')
-    print("model", model)
+async def stream_chat(model, messages=[], context=None, num_ctx=200000, 
+                     temperature=0.0, max_tokens=5000, num_gpu_layers=0):
     try:
-        if model == 'o1-preview' or model == 'o1-mini':
-            content = await sync_chat_o1(model, messages)
+        
+        model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
+        
+        messages = [concat_text_lists(m) for m in messages]
 
-            async def content_stream_():
-                yield content
+        stream = await client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            stream=True,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
 
-            return content_stream_()
+        print("Opened stream with model:", model_name)
 
-        if not model or model == '':
-            model = 'chatgpt-4o-latest'
-        print("model = ", model)
-        if model.startswith('o1'):
-            messages[0]['role'] = 'developer'
-            #max_completion_tokens = 5000
-            stream = await client.chat.completions.create(
-                model=model,
-                stream=True,
-                messages=messages,
-                max_completion_tokens=max_tokens
-            )
-        else:
-            stream = await client.chat.completions.create(
-                model=model,
-                stream=True,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-             
-        print("Opened stream with model: ", model)
         async def content_stream(original_stream):
+            done_reasoning = False
+            yield '[{"reasoning": "'
             async for chunk in original_stream:
-                if os.environ.get('AH_DEBUG') == 'True':
-                    print('\033[92m' + str(chunk.choices[0].delta.content) + '\033[0m', end='')
-
-                yield chunk.choices[0].delta.content or ""
+                #if os.environ.get('AH_DEBUG') == 'True':
+                #    #print('\033[93m' + str(chunk) + '\033[0m', end='')
+                #    #print('\033[92m' + str(chunk.choices[0].delta.content) + '\033[0m', end='')
+                if chunk.choices[0].delta.reasoning_content:
+                    # we actually need to escape the reasoning_content but not convert it to full json
+                    # i.e., it's a string, we don't want to add quotes around it
+                    # but we need to escape it like a json string
+                    json_str = json.dumps(chunk.choices[0].delta.reasoning_content)
+                    without_quotes = json_str[1:-1]
+                    yield without_quotes
+                    print('\033[92m' + str(chunk.choices[0].delta.reasoning_content) + '\033[0m', end='')
+                elif chunk.choices[0].delta.content:
+                    if not done_reasoning:
+                        yield '"}] <<CUT_HERE>>'
+                        done_reasoning = True
+                    yield chunk.choices[0].delta.content or ""
 
         return content_stream(stream)
 
     except Exception as e:
-        print('openai error:', e)
+        print('OpenAI error:', e)
+        #raise
 
+@service()
+async def format_image_message(pil_image, context=None):
+    """Format image for DeepSeek using OpenAI's image format"""
+    buffer = BytesIO()
+    print('converting to base64')
+    pil_image.save(buffer, format='PNG')
+    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    print('done')
+    
+    return {
+        "type": "image_url",
+        "image_url": {
+            "url": f"data:image/png;base64,{image_base64}"
+        }
+    }
 
-from openai import OpenAI
-sync_client = OpenAI()
-
-async def sync_chat_o1(model, messages):
-    messages_copy = messages.copy()
-    messages_copy[0]['role'] = 'user'
-    # print in blue background with white text
-    print('\033[44m' + 'calling ' + model + '\033[0m')
-    print("calling ", model)
-    print("messages_copy", messages_copy)
-    response = sync_client.chat.completions.create(
-        model = model,
-        messages = messages_copy
-    )
-    print("response from o1-preview received:")
-    response = response.choices[0].message.content
-    print(response)
-    return response
-
+@service()
+async def get_image_dimensions(context=None):
+    """Return max supported image dimensions for DeepSeek"""
+    return 4096, 4096, 16777216  # Max width, height, pixels
