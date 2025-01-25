@@ -36,6 +36,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                 print("OpenI Strangely long message content:")
                 print("Message content length:", len(msg['content']))
                 print("Message starts with: ", msg['content'][:200])
+                msg['content'] = msg['content'][:200] + "... (warning: truncated)"
 
         response_format = { "type": "json_object" }
         if model_name == "o1-mini":
