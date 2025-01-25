@@ -25,6 +25,8 @@ def concat_text_lists(message):
     message.update({'content': out_str})
     return message
 
+MAX_MESSAGE_LENGTH= 35000
+
 @service()
 async def stream_chat(model, messages=[], context=None, num_ctx=200000, 
                      temperature=0.0, max_tokens=5000, num_gpu_layers=0):
@@ -32,18 +34,18 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         
         model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
         for msg in messages:
-            if len(msg['content']) > 20000:
+            if len(msg['content']) > MAX_MESSAGE_LENGTH:
                 print("OpenI Strangely long message content:")
                 print("Message content length:", len(msg['content']))
-                print("Message starts with: ", msg['content'][:200])
-                msg['content'] = msg['content'][:200] + "... (warning: truncated)"
+                print("Message starts with: ", msg['content'][:MAX_MESSAGE_LENGTH)
+                msg['content'] = msg['content'][:MAX_MESSAGE_LENGTH] + "... (warning: truncated)"
             elif isinstance(msg['content'], list):
                 for item in msg['content']:
-                    if item['type'] == 'text' and len(item['text']) > 20000:
+                    if item['type'] == 'text' and len(item['text']) > MAX_MESSAGE_LENGTH:
                         print("OpenI Strangely long message content:")
                         print("Message content length:", len(item['text']))
-                        print("Message starts with: ", item['text'][:200])
-                        item['text'] = item['text'][:200] + "... (warning: truncated)"
+                        print("Message starts with: ", item['text'][:MAX_MESSAGE_LENGTH])
+                        item['text'] = item['text'][:MAX_MESSAGE_LENGTH] + "... (warning: truncated)"
 
         response_format = { "type": "json_object" }
         if model_name == "o1-mini":
@@ -86,9 +88,6 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                     except:
                         pass
                 if False: #chunk.choices[0].delta.reasoning_content:
-                    # we actually need to escape the reasoning_content but not convert it to full json
-                    # i.e., it's a string, we don't want to add quotes around it
-                    # but we need to escape it like a json string
                     json_str = json.dumps(chunk.choices[0].delta.reasoning_content)
                     without_quotes = json_str[1:-1]
                     yield without_quotes
