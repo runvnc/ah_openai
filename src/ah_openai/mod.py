@@ -34,9 +34,9 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         
         messages = [concat_text_lists(m) for m in messages]
 
-        if model_name == "o1-mini"
+        if model_name == "o1-mini":
             messages[0]['role'] = "user"
-        elif model_name.starts_with("o1")
+        elif model_name.starts_with("o1"):
             messages[0]['role'] = "developer"
         print("model_name", model_name)
 
