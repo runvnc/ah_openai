@@ -39,9 +39,16 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             max_tokens = 20000
             temperature = 1
         elif model_name.startswith("o1"):
-            messages[0]['irole'] = "developer"
+            messages[0]['role'] = "developer"
             max_tokens = 20000
             temperature = 1
+            content = await sync_chat_o1(model_name, messages)
+
+            async def content_stream_():
+                yield content
+
+            return content_stream_()
+
         print("model_name", model_name)
 
         stream = await client.chat.completions.create(
@@ -80,6 +87,22 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
     except Exception as e:
         print('OpenAI error:', e)
         #raise
+
+from openai import OpenAI
+sync_client = OpenAI()
+
+async def sync_chat_o1(model, messages):
+    messages_copy = messages.copy()
+    # print in blue background with white text
+    print('\033[44m' + 'calling ' + model + '\033[0m')
+    print("calling ", model)
+    print("messages_copy", messages_copy)
+    response = sync_client.chat.completions.create(
+        model = model,
+        messages = messages_copy
+    )
+    response = response.choices[0].message.content
+    return response
 
 @service()
 async def format_image_message(pil_image, context=None):
