@@ -56,12 +56,15 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
 
         async def content_stream(original_stream):
             done_reasoning = False
-            yield '[{"reasoning": "'
             async for chunk in original_stream:
-                #if os.environ.get('AH_DEBUG') == 'True':
-                #    #print('\033[93m' + str(chunk) + '\033[0m', end='')
-                #    #print('\033[92m' + str(chunk.choices[0].delta.content) + '\033[0m', end='')
-                if chunk.choices[0].delta.reasoning_content:
+                
+                if os.environ.get('AH_DEBUG') == 'True':
+                    try:
+                        print('\033[93m' + str(chunk) + '\033[0m', end='')
+                        print('\033[92m' + str(chunk.choices[0].delta.content) + '\033[0m', end='')
+                    except:
+                        pass
+                if False: #chunk.choices[0].delta.reasoning_content:
                     # we actually need to escape the reasoning_content but not convert it to full json
                     # i.e., it's a string, we don't want to add quotes around it
                     # but we need to escape it like a json string
@@ -70,9 +73,6 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                     yield without_quotes
                     print('\033[92m' + str(chunk.choices[0].delta.reasoning_content) + '\033[0m', end='')
                 elif chunk.choices[0].delta.content:
-                    if not done_reasoning:
-                        yield '"}] <<CUT_HERE>>'
-                        done_reasoning = True
                     yield chunk.choices[0].delta.content or ""
 
         return content_stream(stream)
