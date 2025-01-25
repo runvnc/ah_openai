@@ -37,7 +37,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         if model_name == "o1-mini":
             messages[0]['role'] = "user"
             max_tokens = 20000
-            tempeature = 1
+            temperature = 1
         elif model_name.starts_with("o1"):
             messages[0]['irole'] = "developer"
             max_tokens = 20000
