@@ -31,8 +31,12 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
     try:
         
         model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
-        
-        messages = [concat_text_lists(m) for m in messages]
+        for msg in messages:
+            if len(msg['content']) > 20000:
+                print("OpenI Strangely long message content:")
+                print("Message content length:", len(msg['content']))
+                print("Message starts with: ", msg['content'][:200])
+
         response_format = { "type": "json_object" }
         if model_name == "o1-mini":
             messages[0]['role'] = "user"
