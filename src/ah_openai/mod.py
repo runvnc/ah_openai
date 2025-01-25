@@ -33,11 +33,13 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
         
         messages = [concat_text_lists(m) for m in messages]
-
+        response_format = { "type": "json_object" }
         if model_name == "o1-mini":
             messages[0]['role'] = "user"
             max_tokens = 20000
             temperature = 1
+            response_format = { "type": "json_object" }
+
         elif model_name.startswith("o1"):
             messages[0]['role'] = "developer"
             max_tokens = 20000
@@ -55,6 +57,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             model=model_name,
             messages=messages,
             stream=True,
+            response_format=response_format,
             temperature=temperature,
             max_completion_tokens=max_tokens
         )
