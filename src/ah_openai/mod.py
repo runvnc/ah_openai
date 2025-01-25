@@ -35,7 +35,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         messages = [concat_text_lists(m) for m in messages]
 
         if model_name.startswith("o1"):
-            messages[0].role = "developer"
+            messages[0]['role'] = "developer"
 
         stream = await client.chat.completions.create(
             model=model_name,
