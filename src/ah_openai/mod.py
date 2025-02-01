@@ -53,7 +53,11 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             max_tokens = 20000
             temperature = 1
             response_format = { "type": "json_object" }
-
+        elif model_name == "o3-mini":
+            messages[0]['role'] = "developer"
+            max_tokens = 20000
+            temperature = -1
+            response_format = { "type": "json_object" }
         elif model_name.startswith("o1"):
             messages[0]['role'] = "developer"
             max_tokens = 20000
@@ -66,14 +70,15 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             return content_stream_()
 
         print("model_name", model_name)
-
-        stream = await client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            stream=True,
-            temperature=temperature,
-            max_completion_tokens=max_tokens
-        )
+        params = {
+            "model":model_name,
+            "messages": messages,
+            "stream":True,
+            "max_completion_tokens":max_tokens
+        } 
+        if temperature != -1:
+            params['temperature'] = temperature
+        stream = await client.chat.completions.create(**params)
 
         print("Opened stream with model:", model_name)
 
