@@ -88,7 +88,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                 
                 if os.environ.get('AH_DEBUG') == 'True':
                     try:
-                        print('\033[93m' + str(chunk) + '\033[0m', end='')
+                        #print('\033[93m' + str(chunk) + '\033[0m', end='')
                         print('\033[92m' + str(chunk.choices[0].delta.content) + '\033[0m', end='')
                     except:
                         pass
