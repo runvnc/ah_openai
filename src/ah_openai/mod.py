@@ -27,6 +27,19 @@ def concat_text_lists(message):
 
 MAX_MESSAGE_LENGTH= 35000
 
+NO_RAW = """
+
+# Important Override: OpenAI Model Specific Command Formatting
+
+You are a model provided by OpenAI and since you are heavily trained to adhere to JSON,
+you must not attempt to use the RAW format described above. Instead, use plain JSON
+for all commands, including in cases where the command instructions say to use RAW
+for some text parameters.
+
+So in this case it is key that you ignore those particular instructions about START_RAW, END_RAW
+sections. Your training makes it easy for you to output text in JSON with proper escaping.
+"""
+
 @service()
 async def stream_chat(model, messages=[], context=None, num_ctx=200000, 
                      temperature=0.0, max_tokens=5000, num_gpu_layers=0):
@@ -47,7 +60,9 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                         #print("Message starts with: ", item['text'][:MAX_MESSAGE_LENGTH])
                         item['text'] = item['text'][:MAX_MESSAGE_LENGTH] + "... (warning: truncated)"
 
-        response_format = { "type": "json_object" }
+        messages[0]['content'] += NO_RAW
+
+        #response_format = { "type": "json_object" }
         if model_name == "o1-mini":
             messages[0]['role'] = "user"
             max_tokens = 20000
