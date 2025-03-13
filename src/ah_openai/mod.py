@@ -67,19 +67,19 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             messages[0]['role'] = "user"
             max_tokens = 20000
             temperature = 1
-            reasoning_effort = context.data.get("thinking_level", 0) 
+            #reasoning_effort = context.data.get("thinking_level", 0) 
             response_format = { "type": "json_object" }
         elif model_name == "o3-mini":
             messages[0]['role'] = "developer"
             max_tokens = 20000
             temperature = -1
-            reasoning_effort = context.data.get("thinking_level", 0)
+            #reasoning_effort = context.data.get("thinking_level", 0)
             response_format = { "type": "json_object" }
         elif model_name.startswith("o1"):
             messages[0]['role'] = "developer"
             max_tokens = 20000
             temperature = 1
-            reasoning_effort = context.data.get("thinking_level", 0) 
+            #reasoning_effort = context.data.get("thinking_level", 0) 
             content = await sync_chat_o1(model_name, messages)
 
             async def content_stream_():
@@ -97,8 +97,8 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         if temperature != -1:
             params['temperature'] = temperature
 
-        if reasoning_effort is not None:
-            params['reasoning_effort'] = reasoning_effort
+        #if reasoning_effort is not None:
+        #    params['reasoning_effort'] = reasoning_effort
 
         stream = await client.chat.completions.create(**params)
 
