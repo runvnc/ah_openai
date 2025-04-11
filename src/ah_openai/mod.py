@@ -62,7 +62,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
 
         messages[0]['content'] += NO_RAW
         reasoning_effort = None
-        #response_format = { "type": "json_object" }
+        response_format = { "type": "json_object" }
         if model_name == "o1-mini":
             messages[0]['role'] = "user"
             max_tokens = 20000
@@ -91,6 +91,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         params = {
             "model":model_name,
             "messages": messages,
+            "response_format": response_format,
             "stream":True,
             "max_completion_tokens":max_tokens
         } 
