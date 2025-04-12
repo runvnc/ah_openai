@@ -60,7 +60,11 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                         #print("Message starts with: ", item['text'][:MAX_MESSAGE_LENGTH])
                         item['text'] = item['text'][:MAX_MESSAGE_LENGTH] + "... (warning: truncated)"
 
-        messages[0]['content'] += NO_RAW
+        #messages[0]['content'] += NO_RAW
+        print('----------------------------------------------------------------------------------------')
+        print(messages[0]['content'])
+        print('----------------------------------------------------------------------------------------')
+
         reasoning_effort = None
         response_format = { "type": "json_object" }
         if model_name == "o1-mini":
