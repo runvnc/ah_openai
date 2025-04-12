@@ -62,7 +62,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
 
         #messages[0]['content'] += NO_RAW
         print('----------------------------------------------------------------------------------------')
-        print(messages[0]['content'])
+        print(messages[0]['content']['text'])
         print('----------------------------------------------------------------------------------------')
 
         reasoning_effort = None
