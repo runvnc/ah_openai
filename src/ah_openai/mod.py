@@ -131,7 +131,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
 
     except Exception as e:
         print('OpenAI error:', e)
-        #raise
+        raise
 
 from openai import OpenAI
 sync_client = OpenAI()
