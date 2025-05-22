@@ -46,6 +46,8 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
     try:
         if model is None: 
             model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
+        else:
+            model_name = model
         for msg in messages:
             if len(msg['content']) > MAX_MESSAGE_LENGTH:
                 print("OpenI Strangely long message content:")
