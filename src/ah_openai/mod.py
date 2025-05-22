@@ -44,8 +44,8 @@ sections. Your training makes it easy for you to output text in JSON with proper
 async def stream_chat(model, messages=[], context=None, num_ctx=200000, 
                      temperature=0.0, max_tokens=5000, num_gpu_layers=0):
     try:
-        
-        model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
+        if model is None: 
+            model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
         for msg in messages:
             if len(msg['content']) > MAX_MESSAGE_LENGTH:
                 print("OpenI Strangely long message content:")
