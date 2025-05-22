@@ -169,3 +169,19 @@ async def format_image_message(pil_image, context=None):
 async def get_image_dimensions(context=None):
     """Return max supported image dimensions for DeepSeek"""
     return 4096, 4096, 16777216  # Max width, height, pixels
+
+@service()
+async def get_service_models(context=None):
+    """Get available models for the service"""
+    try:
+        all_models = await client.models.list()
+        print(all_models)
+        ids = []
+        for model in all_models.data:
+            print('#####################################################')
+            print(model)
+            ids.append(model.id)
+        return { "stream_chat": ids }
+    except Exception as e:
+        print('Error getting models (OpenAI):', e)
+        return { "stream_chat": [] }
