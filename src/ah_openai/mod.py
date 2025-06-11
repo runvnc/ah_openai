@@ -87,7 +87,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             temperature = -1
             #reasoning_effort = context.data.get("thinking_level", 0)
             response_format = { "type": "json_object" }
-        elif model_name.startswith("o1"):
+        elif model_name.startswith("o1") or model_name.startswith("o3"):
             messages[0]['role'] = "developer"
             max_tokens = 20000
             temperature = 1
