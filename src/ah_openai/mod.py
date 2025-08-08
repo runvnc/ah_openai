@@ -40,6 +40,17 @@ So in this case it is key that you ignore those particular instructions about ST
 sections. Your training makes it easy for you to output text in JSON with proper escaping.
 """
 
+IGNORE_COMMANDS_PROP="""
+
+# Important Override: OpenAI Model Specific Command Formatting
+
+The "commands": [ ] property is not properly implemented with your model.
+Therefore, output pure JSON arrays or use the RAW format, but do NOT
+use the  { "commands": [ ... format. It does not work properly.
+
+
+"""
+
 @service()
 async def stream_chat(model, messages=[], context=None, num_ctx=200000, 
                      temperature=0.0, max_tokens=5000, num_gpu_layers=0):
@@ -63,6 +74,8 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                         item['text'] = item['text'][:MAX_MESSAGE_LENGTH] + "... (warning: truncated)"
 
         #messages[0]['content'] += NO_RAW
+        messages[0]['content'] += IGNORE_COMMANDS_PROP
+
         print('----------------------------------------------------------------------------------------')
         print(messages[0]['content'][0]['text'])
         print('----------------------------------------------------------------------------------------')
