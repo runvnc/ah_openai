@@ -74,7 +74,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                         item['text'] = item['text'][:MAX_MESSAGE_LENGTH] + "... (warning: truncated)"
 
         #messages[0]['content'] += NO_RAW
-        messages[0]['content'] += IGNORE_COMMANDS_PROP
+        messages[0]['content']['text'] += IGNORE_COMMANDS_PROP
 
         print('----------------------------------------------------------------------------------------')
         print(messages[0]['content'][0]['text'])
