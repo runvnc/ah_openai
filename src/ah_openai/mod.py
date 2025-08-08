@@ -74,7 +74,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                         item['text'] = item['text'][:MAX_MESSAGE_LENGTH] + "... (warning: truncated)"
 
         #messages[0]['content'] += NO_RAW
-        messages[0]['content'][0]['text'] += IGNORE_COMMANDS_PROP
+        #messages[0]['content'][0]['text'] += IGNORE_COMMANDS_PROP
 
         print('----------------------------------------------------------------------------------------')
         print(messages[0]['content'][0]['text'])
@@ -102,6 +102,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             response_format = { "type": "json_object" }
         elif model_name.startswith('gpt-5'):
             messages[0]['role'] = "developer"
+            response_format = { "type": "text"}
             max_tokens = 20000
             temperature = 1
         elif model_name.startswith("o1") or model_name.startswith("o3"):
