@@ -44,8 +44,10 @@ IGNORE_COMMANDS_PROP="""
 
 # Important Override: OpenAI Model Specific Command Formatting
 
+IMPORTANT!:
+
 The "commands": [ ] property is not properly implemented with your model.
-Therefore, output pure JSON arrays or use the RAW format, but do NOT
+Therefore, output pure JSON arrays or use the RAW format for multiline strings, but do NOT
 use the  { "commands": [ ... format. It does not work properly.
 
 
@@ -74,7 +76,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                         item['text'] = item['text'][:MAX_MESSAGE_LENGTH] + "... (warning: truncated)"
 
         #messages[0]['content'] += NO_RAW
-        #messages[0]['content'][0]['text'] += IGNORE_COMMANDS_PROP
+        messages[0]['content'][0]['text'] += IGNORE_COMMANDS_PROP
 
         print('----------------------------------------------------------------------------------------')
         print(messages[0]['content'][0]['text'])
