@@ -107,6 +107,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             response_format = { "type": "text"}
             max_tokens = 20000
             temperature = 1
+            reasoning_effort = "minimal"
         elif model_name.startswith("o1") or model_name.startswith("o3"):
             messages[0]['role'] = "developer"
             max_tokens = 20000
@@ -130,8 +131,8 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         if temperature != -1:
             params['temperature'] = temperature
 
-        #if reasoning_effort is not None:
-        #    params['reasoning_effort'] = reasoning_effort
+        if reasoning_effort is not None:
+            params['reasoning_effort'] = reasoning_effort
 
         stream = await client.chat.completions.create(**params)
 
