@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "OpenAI API",
   "services": [
-    {
-      "name": "stream_chat",
-      "description": "Streaming text chat completion"
-    }
+    "stream_chat",
+    "format_image_message",
+    "get_image_dimensions"
   ]
 }
