@@ -133,10 +133,10 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         }
         if os.environ.get('OPENAI_PREDICTED_OUTPUT') == 'True':
             if last_messages is not None and len(last_messages) > 0:
-            params['prediction'] = {
-                "type": "content",
-                "content": last_messages
-            }
+                params['prediction'] = {
+                    "type": "content",
+                    "content": last_messages
+                }
 
         if temperature != -1:
             params['temperature'] = temperature
