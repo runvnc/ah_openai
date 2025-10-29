@@ -5,7 +5,7 @@ from io import BytesIO
 from openai import AsyncOpenAI
 import json
 
-last_messages = None
+last_messages = ""
 
 client = AsyncOpenAI(
     api_key=os.environ.get("OPENAI_API_KEY")
@@ -58,8 +58,9 @@ use the  { "commands": [ ... format. It does not work properly.
 @service()
 async def stream_chat(model, messages=[], context=None, num_ctx=200000, 
                      temperature=0.0, max_tokens=5000, num_gpu_layers=0):
-    global last_messages
     try:
+        global last_messages
+
         if model is None: 
             model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
         else:
