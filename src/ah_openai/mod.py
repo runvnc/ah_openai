@@ -151,6 +151,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
 
         last_messages = ""
         async def content_stream(original_stream):
+            global last_messages
             done_reasoning = False
             async for chunk in original_stream:
                 
