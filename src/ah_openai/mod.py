@@ -5,6 +5,8 @@ from io import BytesIO
 from openai import AsyncOpenAI
 import json
 
+last_messages = None
+
 client = AsyncOpenAI(
     api_key=os.environ.get("OPENAI_API_KEY")
 )
@@ -56,6 +58,7 @@ use the  { "commands": [ ... format. It does not work properly.
 @service()
 async def stream_chat(model, messages=[], context=None, num_ctx=200000, 
                      temperature=0.0, max_tokens=5000, num_gpu_layers=0):
+    global last_messages
     try:
         if model is None: 
             model_name = os.environ.get("AH_OVERRIDE_LLM_MODEL", "o1-mini")
@@ -127,7 +130,14 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             "response_format": response_format,
             "stream":True,
             "max_completion_tokens":max_tokens
-        } 
+        }
+        if os.environ.get('OPENAI_PREDICTED_OUTPUT') == 'True':
+            if last_messages is not None and len(last_messages) > 0:
+            params['prediction'] = {
+                "type":" "content",
+                "content": last_messages
+            }
+
         if temperature != -1:
             params['temperature'] = temperature
 
@@ -138,6 +148,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
 
         print("Opened stream with model:", model_name)
 
+        last_messages = ""
         async def content_stream(original_stream):
             done_reasoning = False
             async for chunk in original_stream:
@@ -154,10 +165,11 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                     yield without_quotes
                     print('\033[92m' + str(chunk.choices[0].delta.reasoning_content) + '\033[0m', end='')
                 elif chunk.choices[0].delta.content:
+                    last_messages += chunk.choices[0].delta.content
                     yield chunk.choices[0].delta.content or ""
-
+        
         return content_stream(stream)
-
+    
     except Exception as e:
         print('OpenAI error:', e)
         raise
