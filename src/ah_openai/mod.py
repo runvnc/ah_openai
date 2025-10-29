@@ -138,6 +138,8 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                     "type": "content",
                     "content": last_messages
                 }
+                #remove response_format
+                del params['response_format']
 
         if temperature != -1:
             params['temperature'] = temperature
