@@ -140,6 +140,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
                 }
                 #remove response_format
                 del params['response_format']
+                del params['max_completion_tokens']
 
         if temperature != -1:
             params['temperature'] = temperature
