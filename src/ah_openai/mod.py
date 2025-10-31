@@ -132,11 +132,12 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             "stream":True,
             "max_completion_tokens":max_tokens
         }
+        system_message = concat_text_lists(messages[0])
         if os.environ.get('OPENAI_PREDICTED_OUTPUT') == 'True':
-            if last_messages is not None and len(last_messages) > 0:
+            if last_messages is not None:  #and len(last_messages) > 0:
                 params['prediction'] = {
                     "type": "content",
-                    "content": last_messages
+                    "content": system_message
                 }
                 #remove response_format
                 del params['response_format']
