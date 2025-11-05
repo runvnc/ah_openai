@@ -108,10 +108,18 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 item = server_event['item']
                 if item['type'] == "function_call":
                     print("Function call received:")
-                    arguments = json.loads(item['arguments'])
+                    try:
+                        arguments = json.loads(item['arguments'])
+                    except json.JSONDecodeError:
+                        raise Exception("Invalid JSON in function call arguments")
                     try:
                         cmd = json.loads(arguments['text'])
-                        await on_command(cmd, context=context)
+                        # if this is a list, loop over it
+                        if isinstance(cmd, list):
+                            for single_cmd in cmd:
+                                await on_command(single_cmd, context=context)
+                        else:
+                            await on_command(cmd, context=context)
                     except json.JSONDecodeError:
                         pass
                     except Exception as e:
