@@ -147,7 +147,7 @@ async def send_s2s_message(message, context=None):
         "type": "conversation.item.create",
         "item": {
             "type": "message",
-            "role": role,
+            "role": "user",
             "content": parts
         },
         "event_id": nanoid.generate()
