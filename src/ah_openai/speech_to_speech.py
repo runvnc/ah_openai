@@ -71,7 +71,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             else:
                 print("received message:")
                 print(message)
-            except Exception as e:
+        except Exception as e:
             trace = traceback.format_exc()
             print(e)
             print(trace)
