@@ -134,6 +134,7 @@ async def send_s2s_message(message, context=None):
     global openai_sockets
     parts = [] 
     for item in message['content']:
+        print(f"item is {item}")
         part = {}
         if item['type'] == 'text':
             part['type'] = 'input_text'
