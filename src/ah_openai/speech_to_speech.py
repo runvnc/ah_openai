@@ -12,7 +12,7 @@ import os
 import websocket
 import simpleaudio as sa
 import nanoid
-from lib.providers.services import service 
+from lib.providers.services import service
 
 
 openai_sockets = {}
