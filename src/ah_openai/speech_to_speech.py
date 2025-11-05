@@ -17,7 +17,7 @@ openai_sockets = {}
 
 @service()
 async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice='marin',
-                    play_local=False, context=None, **kwargs):
+                    play_local=True, context=None, **kwargs):
     """
         Start a speech-to-speech OpenAI realtime websocket session.
         Session will be identifiedby context.log_id
