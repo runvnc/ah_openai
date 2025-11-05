@@ -11,6 +11,7 @@ dependencies = [
     "openai>=1.66.3",
     "python-dotenv",
     "nanoid",
-    "simpleaudio"
+    "simpleaudio",
+    "sounddevice"
 ]
 
