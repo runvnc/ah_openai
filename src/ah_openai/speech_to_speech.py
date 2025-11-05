@@ -8,7 +8,7 @@ import time
 import asyncio
 import os
 import websocket
-import simpleaudio as sa
+import sounddevice as sd
 import nanoid
 from lib.providers.services import service
 
@@ -92,11 +92,11 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 print()
                 audio_bytes = base64.b64decode(server_event['delta'])
                 if play_local:
-                    # Ensure buffer is properly aligned (multiple of 2 bytes for int16)
-                    if len(audio_bytes) % 2 != 0:
-                        audio_bytes = audio_bytes[:-1]  # Trim last byte if odd
-                    play_obj = sa.play_buffer(audio_bytes, 1, 2, 24000)
-                    play_obj.wait_done()
+                    # Convert bytes to numpy array for sounddevice
+                    import numpy as np
+                    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+                    # Play and wait for completion
+                    sd.play(audio_array, 24000, blocking=True)
                 #if on_audio_chunk:
                 #    await on_audio_chunk(audio_bytes, context=context)
  
@@ -231,5 +231,3 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
         ws.send(json.dumps(event))
     else:
         raise Exception(f"No active OpenAI socket for log_id {context.log_id}")
-
-
