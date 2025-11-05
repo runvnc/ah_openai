@@ -86,12 +86,17 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
         try:
             server_event = json.loads(message)
             if server_event['type'] == "response.output_audio.delta":
-                print("Audio chunk received")
+                print()
+                print("Audio chunk received !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print()
+                print()
                 audio_bytes = base64.b64decode(server_event['delta'])
-                await on_audio_chunk(audio_bytes, context=context)
+                if on_audio_chunk:
+                    await on_audio_chunk(audio_bytes, context=context)
                 if play_local:
                     play_obj = sa.play_buffer(audio_bytes, 1, 2, 24000)
                     play_obj.wait_done()
+
             elif server_event['type'] == "conversation.item.done":
                 print("Conversation item done received")
                 item = server_event['item']
