@@ -44,7 +44,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
     if model is None:
         model = 'gpt-realtime'
         
-    def on_message(ws, message):
+    async def on_message(ws, message):
         try:
             server_event = json.loads(message)
             if server_event['type'] == "response.output_audio.delta":
