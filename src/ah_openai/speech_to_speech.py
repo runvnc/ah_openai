@@ -4,8 +4,6 @@ import struct
 import soundfile as sf
 import traceback
 # for playing local audio
-import pyaudio
-import wave
 import time
 import asyncio
 import os

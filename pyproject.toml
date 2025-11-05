@@ -10,6 +10,7 @@ requires-python = ">=3.7"
 dependencies = [
     "openai>=1.66.3",
     "python-dotenv",
-    "nanoid"
+    "nanoid",
+    "simpleaudio"
 ]
 
