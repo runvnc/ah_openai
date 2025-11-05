@@ -15,6 +15,42 @@ from lib.providers.services import service
 
 openai_sockets = {}
 
+def float_to_16bit_pcm(float32_array):
+    clipped = [max(-1.0, min(1.0, x)) for x in float32_array]
+    pcm16 = b''.join(struct.pack('<h', int(x * 32767)) for x in clipped)
+    return pcm16
+
+def base64_encode_audio(float32_array):
+    pcm_bytes = float_to_16bit_pcm(float32_array)
+    encoded = base64.b64encode(pcm_bytes).decode('ascii')
+    return encoded
+
+files = [
+    #'/files/upd6/mr_verification_dashboard/audio/voicemailpadded.wav',
+    '/files/upd6/mr_verification_dashboard/audio/voicemailpadded2_24000_pcm.wav'
+]
+
+def send_wavs():
+    try:
+        print("Top of send_wavs")
+        for filename in files:
+            data, samplerate = sf.read(filename, dtype='float32')
+            channel_data = data[:, 0] if data.ndim > 1 else data
+            #base64_chunk = base64.b64encode(channel_data.tobytes()).decode('ascii')
+            base64_chunk = base64_encode_audio(channel_data)
+
+            # Send the client event
+            event = {
+                "type": "input_audio_buffer.append",
+                "audio": base64_chunk
+            }
+            print("Sending audio data")
+            ws.send(json.dumps(event))
+            print('sent audio chunk')
+    except Exception as e:
+        print(e)
+
+
 @service()
 async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice='marin',
                     play_local=True, context=None, **kwargs):
@@ -114,6 +150,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             #"event_id": "5fc543c4-f59c-420f-8fb9-68c45d1546a7a2"
             }
             ws.send(json.dumps(session_update))
+            send_wavs()
             print("OpenAI realtime initialized session.")
         except Exception as e:
             trace = traceback.format_exc()
