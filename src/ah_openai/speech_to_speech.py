@@ -76,6 +76,10 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             print(e)
             print(trace)
 
+    def on_message_(ws, message):
+        asyncio.run(on_message(ws, message))
+
+
     def on_open(ws):
         try: 
             print("OpenAI realtime websocket connected to server.")
@@ -117,11 +121,13 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
         url,
         header=headers,
         on_open=on_open,
-        on_message=on_message,
+        on_message=on_message_,
     )
     openai_sockets[context.log_id] = ws
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, ws.run_forever)
+
+
 
 @service()
 async def send_s2s_message(message, context=None):
