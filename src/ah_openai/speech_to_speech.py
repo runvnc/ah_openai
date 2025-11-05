@@ -59,7 +59,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                     arguments = json.loads(item['arguments'])
                     try:
                         cmd = json.loads(arguments['text'])
-                        await on_command(item['name'], cmd, context=context)
+                        await on_command(cmd, context=context)
                     except json.JSONDecodeError:
                         pass
                     except Exception as e:

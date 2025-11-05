@@ -229,3 +229,4 @@ async def get_service_models(context=None):
     except Exception as e:
         print('Error getting models (OpenAI):', e)
         return { "stream_chat": [] }
+
