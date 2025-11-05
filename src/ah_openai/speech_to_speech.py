@@ -92,6 +92,9 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 print()
                 audio_bytes = base64.b64decode(server_event['delta'])
                 if play_local:
+                    # Ensure buffer is properly aligned (multiple of 2 bytes for int16)
+                    if len(audio_bytes) % 2 != 0:
+                        audio_bytes = audio_bytes[:-1]  # Trim last byte if odd
                     play_obj = sa.play_buffer(audio_bytes, 1, 2, 24000)
                     play_obj.wait_done()
                 #if on_audio_chunk:
