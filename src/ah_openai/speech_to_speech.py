@@ -132,6 +132,9 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
 @service()
 async def send_s2s_message(message, context=None):
     global openai_sockets
+    ws = openai_sockets.get(context.log_id)
+    if not ws:
+        raise Exception(f"No active OpenAI socket for log_id {context.log_id}")
     parts = [] 
     for item in message['content']:
         print(f"item is {item}")
@@ -152,9 +155,8 @@ async def send_s2s_message(message, context=None):
         },
         "event_id": nanoid.generate()
     }
-    ws = openai_sockets.get(context.log_id)
-    if ws:
-        ws.send(json.dumps(event))
+    ws.send(json.dumps(event))
+    print(f"Sent message to OpenAI s2s: {event}")
  
 
 @service()
