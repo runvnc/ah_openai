@@ -207,7 +207,7 @@ async def send_s2s_message(message, context=None):
         "event_id": nanoid.generate()
     }
     ws.send(json.dumps(event))
-    ws.send(json.dumps({"type": "response.create"})
+    ws.send(json.dumps({"type": "response.create"}))
     print(f"Sent message to OpenAI s2s: {event}")
  
 
