@@ -48,7 +48,9 @@ def send_wavs():
             ws.send(json.dumps(event))
             print('sent audio chunk')
     except Exception as e:
+        trace = traceback.format_exc()
         print(e)
+        print(trace)
 
 
 @service()
