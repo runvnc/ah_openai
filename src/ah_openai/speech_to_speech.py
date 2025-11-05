@@ -95,10 +95,10 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 if play_local:
                     print("Not Playing audio chunk locally...")
                     # Convert bytes to numpy array for sounddevice
-                    #import numpy as np
-                    #audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+                    import numpy as np
+                    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
                     # Play and wait for completion
-                    #sd.play(audio_array, 24000, blocking=True)
+                    sd.play(audio_array, 24000, blocking=True)
                 #if on_audio_chunk:
                 #    await on_audio_chunk(audio_bytes, context=context)
  
