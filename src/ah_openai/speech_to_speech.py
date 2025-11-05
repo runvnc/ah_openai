@@ -30,7 +30,7 @@ files = [
     '/files/upd6/mr_verification_dashboard/audio/voicemailpadded2_24000_pcm.wav'
 ]
 
-def send_wavs():
+def send_wavs(ws):
     try:
         print("Top of send_wavs")
         for filename in files:
@@ -152,7 +152,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             #"event_id": "5fc543c4-f59c-420f-8fb9-68c45d1546a7a2"
             }
             ws.send(json.dumps(session_update))
-            send_wavs()
+            send_wavs(ws)
             print("OpenAI realtime initialized session.")
         except Exception as e:
             trace = traceback.format_exc()
