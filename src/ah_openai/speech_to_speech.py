@@ -117,14 +117,17 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                     try:
                         arguments = json.loads(item['arguments'])
                     except json.JSONDecodeError:
+                        print("Invalid JSON in function call arguments")
                         raise Exception("Invalid JSON in function call arguments")
                     try:
                         cmd = json.loads(arguments['text'])
                         # if this is a list, loop over it
                         if isinstance(cmd, list):
                             for single_cmd in cmd:
+                                print("Invoking on_command callback for command:", str(single_cmd))
                                 await on_command(single_cmd, context=context)
                         else:
+                            print("Invoking on_command callback for command:", str(single_cmd))
                             await on_command(cmd, context=context)
                     except json.JSONDecodeError:
                         pass
@@ -141,6 +144,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             trace = traceback.format_exc()
             print(e)
             print(trace)
+            raise e
 
     def on_message_(ws, message):
         asyncio.run(on_message(ws, message))
