@@ -127,7 +127,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                                 print("Invoking on_command callback for command:", str(single_cmd))
                                 await on_command(single_cmd, context=context)
                         else:
-                            print("Invoking on_command callback for command:", str(single_cmd))
+                            print("Invoking on_command callback for command:", str(cmd))
                             await on_command(cmd, context=context)
                     except json.JSONDecodeError:
                         pass
