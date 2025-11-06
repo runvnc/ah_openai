@@ -13,6 +13,7 @@ import nanoid
 from lib.providers.services import service
 
 
+import logging
 openai_sockets = {}
 
 def float_to_16bit_pcm(float32_array):
@@ -24,6 +25,8 @@ def base64_encode_audio(float32_array):
     pcm_bytes = float_to_16bit_pcm(float32_array)
     encoded = base64.b64encode(pcm_bytes).decode('ascii')
     return encoded
+
+logger = logging.getLogger(__name__)
 
 files = [
     #'/files/upd6/mr_verification_dashboard/audio/voicemailpadded.wav',
@@ -88,6 +91,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
         
     async def on_message(ws, message):
         try:
+            logger.debug(f"S2S_DEBUG: Received message from OpenAI")
             server_event = json.loads(message)
             print(f"Received server event: {server_event['type']}")
             if server_event['type'] == "response.output_audio.delta":
@@ -99,6 +103,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 
                 # Play locally if requested
                 if play_local:
+                    logger.info("S2S_DEBUG: Playing audio chunk locally")
                     print("Playing audio chunk locally...")
                     import numpy as np
                     audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
@@ -106,6 +111,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 
                 # Call the audio chunk callback if provided
                 if on_audio_chunk:
+                    logger.debug(f"S2S_DEBUG: Calling on_audio_chunk callback with {len(audio_bytes)} bytes")
                     await on_audio_chunk(audio_bytes, context=context)
  
 
@@ -253,6 +259,8 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
         audio_bytes: bytes of audio data in int16 PCM format
                      at 24000 Hz sample rate.
     """
+    if not hasattr(send_s2s_audio_chunk, '_chunk_count'):
+        send_s2s_audio_chunk._chunk_count = 0
     global openai_sockets
     # Convert int16 PCM to float32 for encoding
     import numpy as np
@@ -265,7 +273,14 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
         "audio": base64_chunk
     }
     ws = openai_sockets.get(context.log_id)
+    logger.debug(f"S2S_DEBUG: send_s2s_audio_chunk called, log_id={context.log_id if context else None}")
+    logger.debug(f"S2S_DEBUG: WebSocket exists: {ws is not None}")
+    
     if ws:
+        send_s2s_audio_chunk._chunk_count += 1
         ws.send(json.dumps(event))
+        if send_s2s_audio_chunk._chunk_count % 50 == 0:
+            logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} audio chunks to OpenAI")
     else:
+        logger.error(f"S2S_DEBUG: No active OpenAI socket for log_id {context.log_id}")
         raise Exception(f"No active OpenAI socket for log_id {context.log_id}")
