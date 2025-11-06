@@ -54,11 +54,11 @@ def send_wavs(ws):
 
 
 @service()
-async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice='alloy',
+async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice='marin',
                     play_local=True, context=None, **kwargs):
     """
         Start a speech-to-speech OpenAI realtime websocket session.
-        Session will be identified by context.log_id
+        Session will be identifiedby context.log_id
 
         Arguments:
 
@@ -70,11 +70,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                         Arg 1: function name, arg 2: function parameters dict.
 
             on_audio_chunk: async callback function to handle audio chunks from the server.
-                            Arg: audio bytes in int16 PCM format at 24000 Hz sample rate.
-
-            voice: OpenAI voice to use (alloy, echo, fable, onyx, nova, shimmer)
-
-            play_local: whether to play audio locally (default True)
+                            Arg: audio bytes in float32 PCM format at 24000 Hz sample rate.
 
     """
     global openai_sockets
@@ -92,21 +88,19 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             print(f"Received server event: {server_event['type']}")
             if server_event['type'] == "response.output_audio.delta":
                 print()
-                print("Audio chunk received !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print("Audio chunk received !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                 print()
                 print()
                 audio_bytes = base64.b64decode(server_event['delta'])
-                
-                # Play locally if requested
                 if play_local:
-                    print("Playing audio chunk locally...")
+                    print("Not Playing audio chunk locally...")
+                    # Convert bytes to numpy array for sounddevice
                     import numpy as np
                     audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+                    # Play and wait for completion
                     sd.play(audio_array, 24000, blocking=True)
-                
-                # Call the audio chunk callback if provided
-                if on_audio_chunk:
-                    await on_audio_chunk(audio_bytes, context=context)
+                #if on_audio_chunk:
+                #    await on_audio_chunk(audio_bytes, context=context)
  
 
             elif server_event['type'] == "conversation.item.done":
@@ -177,7 +171,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             #"event_id": "5fc543c4-f59c-420f-8fb9-68c45d1546a7a2"
             }
             ws.send(json.dumps(session_update))
-            #send_wavs(ws)
+            send_wavs(ws)
             print("OpenAI realtime initialized session.")
         except Exception as e:
             trace = traceback.format_exc()
@@ -233,15 +227,11 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
         Send an audio chunk to the server for processing.
         context.log_id identifies the session.
 
-        audio_bytes: bytes of audio data in int16 PCM format
+        audio_bytes: bytes of audio data in float 32 PCM format
                      at 24000 Hz sample rate.
     """
     global openai_sockets
-    # Convert int16 PCM to float32 for encoding
-    import numpy as np
-    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-    float32_array = audio_array.astype(np.float32) / 32767.0
-    
+    float32_array = struct.unpack('<' + 'f' * (len(audio_bytes) // 4), audio_bytes)
     base64_chunk = base64_encode_audio(float32_array)
     event = {
         "type": "input_audio_buffer.append",
