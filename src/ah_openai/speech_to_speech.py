@@ -120,15 +120,23 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                         print("Invalid JSON in function call arguments")
                         raise Exception("Invalid JSON in function call arguments")
                     try:
-                        cmd = json.loads(arguments['text'])
-                        # if this is a list, loop over it
-                        if isinstance(cmd, list):
-                            for single_cmd in cmd:
-                                print("Invoking on_command callback for command:", str(single_cmd))
-                                await on_command(single_cmd, context=context)
-                        else:
+                        if item['name'] != 'output':
+                            cmd_name = item['name']
+                            args = json.loads(item['arguments'])
+                            cmd = {}
+                            cmd[cmd_name] = args
                             print("Invoking on_command callback for command:", str(cmd))
                             await on_command(cmd, context=context)
+                        else:
+                            cmd = json.loads(arguments['text'])
+                            # if this is a list, loop over it
+                            if isinstance(cmd, list):
+                                for single_cmd in cmd:
+                                    print("Invoking on_command callback for command:", str(single_cmd))
+                                    await on_command(single_cmd, context=context)
+                            else:
+                                print("Invoking on_command callback for command:", str(cmd))
+                                await on_command(cmd, context=context)
                     except json.JSONDecodeError:
                         pass
                     except Exception as e:
@@ -136,7 +144,14 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                         trace = traceback.format_exc()
                         print(e)
                         print(trace)
-                        raise e
+                        asyncio.sleep(0.5)
+                        err_content = ([{
+                            "type": "text",
+                            "text": f"[SYSTEM: Error executing command: {str(e)}\n{str(trace)}]"
+                        }])
+                        error_msg = { "role": "user", "content": content }
+                        await send_s2s_message(error_msg, context=context)
+                        #raise e
             else:
                 print("received message:")
                 print(message)
