@@ -166,7 +166,14 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             raise e
 
     def on_message_(ws, message):
-        asyncio.run(on_message(ws, message))
+        # Don't use asyncio.run() as it creates a new event loop and closes it,
+        # which can cancel tasks in the original loop!
+        # Instead, schedule the coroutine in the existing event loop
+        try:
+            loop = asyncio.get_event_loop()
+            asyncio.run_coroutine_threadsafe(on_message(ws, message), loop)
+        except Exception as e:
+            logger.error(f"Error in on_message_: {e}")
 
 
     def on_open(ws):
