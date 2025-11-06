@@ -259,28 +259,34 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
         audio_bytes: bytes of audio data in int16 PCM format
                      at 24000 Hz sample rate.
     """
-    if not hasattr(send_s2s_audio_chunk, '_chunk_count'):
-        send_s2s_audio_chunk._chunk_count = 0
-    global openai_sockets
-    # Convert int16 PCM to float32 for encoding
-    import numpy as np
-    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-    float32_array = audio_array.astype(np.float32) / 32767.0
-    
-    base64_chunk = base64_encode_audio(float32_array)
-    event = {
-        "type": "input_audio_buffer.append",
-        "audio": base64_chunk
-    }
-    ws = openai_sockets.get(context.log_id)
-    logger.debug(f"S2S_DEBUG: send_s2s_audio_chunk called, log_id={context.log_id if context else None}")
-    logger.debug(f"S2S_DEBUG: WebSocket exists: {ws is not None}")
-    
-    if ws:
-        send_s2s_audio_chunk._chunk_count += 1
-        ws.send(json.dumps(event))
-        if send_s2s_audio_chunk._chunk_count % 50 == 0:
-            logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} audio chunks to OpenAI")
-    else:
-        logger.error(f"S2S_DEBUG: No active OpenAI socket for log_id {context.log_id}")
-        raise Exception(f"No active OpenAI socket for log_id {context.log_id}")
+    try:
+        if not hasattr(send_s2s_audio_chunk, '_chunk_count'):
+            send_s2s_audio_chunk._chunk_count = 0
+        global openai_sockets
+        # Convert int16 PCM to float32 for encoding
+        import numpy as np
+        audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+        float32_array = audio_array.astype(np.float32) / 32767.0
+        
+        base64_chunk = base64_encode_audio(float32_array)
+        event = {
+            "type": "input_audio_buffer.append",
+            "audio": base64_chunk
+        }
+        ws = openai_sockets.get(context.log_id)
+        logger.debug(f"S2S_DEBUG: send_s2s_audio_chunk called, log_id={context.log_id if context else None}")
+        logger.debug(f"S2S_DEBUG: WebSocket exists: {ws is not None}")
+        
+        if ws:
+            send_s2s_audio_chunk._chunk_count += 1
+            ws.send(json.dumps(event))
+            if send_s2s_audio_chunk._chunk_count % 50 == 0:
+                logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} audio chunks to OpenAI")
+        else:
+            logger.error(f"S2S_DEBUG: No active OpenAI socket for log_id {context.log_id}")
+            raise Exception(f"No active OpenAI socket for log_id {context.log_id}")
+    except Exception as e:
+        trace = traceback.format_exc()
+        print(e)
+        print(trace)
+        raise e
