@@ -15,6 +15,8 @@ from lib.providers.services import service
 
 import logging
 openai_sockets = {}
+# Store event loops for each session
+openai_loops = {}
 
 def float_to_16bit_pcm(float32_array):
     clipped = [max(-1.0, min(1.0, x)) for x in float32_array]
@@ -81,6 +83,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
 
     """
     global openai_sockets
+    global openai_loops
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
     url = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
@@ -166,11 +169,12 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
             raise e
 
     def on_message_(ws, message):
-        # Don't use asyncio.run() as it creates a new event loop and closes it,
-        # which can cancel tasks in the original loop!
-        # Instead, schedule the coroutine in the existing event loop
+        # WebSocket runs in a thread pool, so we need to use the stored loop reference
         try:
-            loop = asyncio.get_event_loop()
+            # Get the loop we stored when starting the session
+            loop = openai_loops.get(context.log_id)
+            if not loop:
+                raise Exception(f"No event loop found for session {context.log_id}")
             asyncio.run_coroutine_threadsafe(on_message(ws, message), loop)
         except Exception as e:
             logger.error(f"Error in on_message_: {e}")
@@ -221,6 +225,8 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
         on_message=on_message_,
     )
     openai_sockets[context.log_id] = ws
+    # Store the current event loop for this session
+    openai_loops[context.log_id] = asyncio.get_event_loop()
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, ws.run_forever)
 
