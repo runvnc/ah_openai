@@ -116,9 +116,9 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                     print("Function call received:")
                     try:
                         arguments = json.loads(item['arguments'])
-                    except json.JSONDecodeError:
-                        print("Invalid JSON in function call arguments")
-                        raise Exception("Invalid JSON in function call arguments")
+                    except Exception as e:
+                        print("Error:",e)
+                        raise Exception("Error:" + str(e))
                     try:
                         if item['name'] != 'output':
                             cmd_name = item['name']
@@ -137,8 +137,6 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                             else:
                                 print("Invoking on_command callback for command:", str(cmd))
                                 await on_command(cmd, context=context)
-                    except json.JSONDecodeError:
-                        pass
                     except Exception as e:
                         print("Error in on_command callback:")
                         trace = traceback.format_exc()
