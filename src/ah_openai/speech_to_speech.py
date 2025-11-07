@@ -193,8 +193,8 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                             "turn_detection": {
                                 "type": "semantic_vad",
                                 "eagerness": "medium",
-                                "create_response": true, // only in conversation mode
-                                "interrupt_response": true, // only in conversation mode
+                                "create_response": True, 
+                                "interrupt_response": True
                             }
                         },
                         "output" : { "voice": voice }
