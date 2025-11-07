@@ -114,7 +114,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 
                 # Call the audio chunk callback if provided
                 if on_audio_chunk:
-                    logger.debug(f"S2S_DEBUG: Calling on_audio_chunk callback with {len(audio_bytes)} bytes")
+                    #logger.debug(f"S2S_DEBUG: Calling on_audio_chunk callback with {len(audio_bytes)} bytes")
                     await on_audio_chunk(audio_bytes, context=context)
  
 
@@ -297,14 +297,14 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
             "audio": base64_chunk
         }
         ws = openai_sockets.get(context.log_id)
-        logger.debug(f"S2S_DEBUG: send_s2s_audio_chunk called, log_id={context.log_id if context else None}")
-        logger.debug(f"S2S_DEBUG: WebSocket exists: {ws is not None}")
+        #logger.debug(f"S2S_DEBUG: send_s2s_audio_chunk called, log_id={context.log_id if context else None}")
+        #logger.debug(f"S2S_DEBUG: WebSocket exists: {ws is not None}")
         
         if ws:
             send_s2s_audio_chunk._chunk_count += 1
             ws.send(json.dumps(event))
             if send_s2s_audio_chunk._chunk_count % 50 == 0:
-                logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} audio chunks to OpenAI")
+                #logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} audio chunks to OpenAI")
         else:
             logger.error(f"S2S_DEBUG: No active OpenAI socket for log_id {context.log_id}")
             raise Exception(f"No active OpenAI socket for log_id {context.log_id}")
