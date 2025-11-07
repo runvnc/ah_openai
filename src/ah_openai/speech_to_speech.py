@@ -59,7 +59,7 @@ def send_wavs(ws):
 
 
 @service()
-async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice='alloy',
+async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice='marin',
                     play_local=True, context=None, **kwargs):
     """
         Start a speech-to-speech OpenAI realtime websocket session.
@@ -188,7 +188,17 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 "session": {
                     "type": "realtime",
                     "instructions": system_prompt,
-                    "audio": {"output" : { "voice": voice} },
+                    "audio": {
+                        "input": {
+                            "turn_detection": {
+                                "type": "semantic_vad",
+                                "eagerness": "medium",
+                                "create_response": true, // only in conversation mode
+                                "interrupt_response": true, // only in conversation mode
+                            }
+                        },
+                        "output" : { "voice": voice }
+                    },
                     "tools": [
                     {
                         "type": "function",
