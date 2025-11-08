@@ -309,12 +309,11 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
             send_s2s_audio_chunk._total_bytes = 0
         global openai_sockets
         
-        # Amplify audio volume (ulaw -> PCM16 -> amplify -> ulaw)
-        # This helps OpenAI's VAD detect speech better
-        GAIN = 1.3  # 1.3x amplification (reduced to avoid clipping)
-        pcm_audio = audioop.ulaw2lin(audio_bytes, 2)  # ulaw to PCM16
-        amplified_pcm = audioop.mul(pcm_audio, 2, GAIN)  # Amplify
-        audio_bytes = audioop.lin2ulaw(amplified_pcm, 2)  # PCM16 back to ulaw
+        # Amplification disabled for testing - may not be needed after format fix
+        # GAIN = 1.3
+        # pcm_audio = audioop.ulaw2lin(audio_bytes, 2)
+        # amplified_pcm = audioop.mul(pcm_audio, 2, GAIN)
+        # audio_bytes = audioop.lin2ulaw(amplified_pcm, 2)
         
         # Audio is already in ulaw format from PySIP, just base64 encode it
         base64_chunk = base64.b64encode(audio_bytes).decode('ascii')
