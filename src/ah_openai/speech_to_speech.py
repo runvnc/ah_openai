@@ -297,6 +297,7 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
     try:
         if not hasattr(send_s2s_audio_chunk, '_chunk_count'):
             send_s2s_audio_chunk._chunk_count = 0
+            send_s2s_audio_chunk._total_bytes = 0
         global openai_sockets
         
         # Audio is already in ulaw format from PySIP, just base64 encode it
@@ -309,8 +310,12 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
         #logger.debug(f"S2S_DEBUG: send_s2s_audio_chunk called, log_id={context.log_id if context else None}")
         #logger.debug(f"S2S_DEBUG: WebSocket exists: {ws is not None}")
         
+        send_s2s_audio_chunk._chunk_count += 1
+        send_s2s_audio_chunk._total_bytes += len(audio_bytes)
+        if send_s2s_audio_chunk._chunk_count % 50 == 0:
+            logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} chunks ({send_s2s_audio_chunk._total_bytes} bytes total, avg {send_s2s_audio_chunk._total_bytes//send_s2s_audio_chunk._chunk_count} bytes/chunk) to OpenAI")
+        
         if ws:
-            send_s2s_audio_chunk._chunk_count += 1
             ws.send(json.dumps(event))
             #if send_s2s_audio_chunk._chunk_count % 50 == 0:
             #    #logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} audio chunks to OpenAI")
