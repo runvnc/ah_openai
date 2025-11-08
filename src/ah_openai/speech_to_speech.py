@@ -284,22 +284,18 @@ async def send_s2s_message(message, context=None):
 @service()
 async def send_s2s_audio_chunk(audio_bytes, context=None):
     """
-        Send an audio chunk to the server for processing.
+        Send an audio chunk to OpenAI for processing.
         context.log_id identifies the session.
 
-        audio_bytes: bytes of audio data in int16 PCM format
-                     at 24000 Hz sample rate.
+        audio_bytes: bytes of audio data (ulaw format from PySIP)
     """
     try:
         if not hasattr(send_s2s_audio_chunk, '_chunk_count'):
             send_s2s_audio_chunk._chunk_count = 0
         global openai_sockets
-        # Convert int16 PCM to float32 for encoding
-        #import numpy as np
-        #audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-        #float32_array = audio_array.astype(np.float32) / 32767.0
         
-        base64_chunk = base64_encode_audio(float32_array)
+        # Audio is already in ulaw format from PySIP, just base64 encode it
+        base64_chunk = base64.b64encode(audio_bytes).decode('ascii')
         event = {
             "type": "input_audio_buffer.append",
             "audio": base64_chunk
