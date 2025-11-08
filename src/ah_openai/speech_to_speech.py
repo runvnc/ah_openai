@@ -194,6 +194,10 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                             "format": {
                                 "type": "audio/pcmu"
                             },
+                            "transcription": {
+                                "language": "en",
+                                "model": "gpt-4o-transcribe"
+                            },
                             "turn_detection": {
                                 "type": "semantic_vad",
                                 "eagerness": "medium",
