@@ -200,8 +200,10 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                                 "model": "gpt-4o-transcribe"
                             },
                             "turn_detection": {
-                                "type": "semantic_vad",
-                                "eagerness": "medium",
+                                "type": "server_vad",
+                                "threshold": 0.5,
+                                "prefix_padding_ms": 300,
+                                "silence_duration_ms": 700,
                                 "create_response": True, 
                                 "interrupt_response": True
                             }
@@ -303,7 +305,7 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
         
         # Amplify audio volume (ulaw -> PCM16 -> amplify -> ulaw)
         # This helps OpenAI's VAD detect speech better
-        GAIN = 2.0  # 2x amplification
+        GAIN = 1.3  # 1.3x amplification (reduced to avoid clipping)
         pcm_audio = audioop.ulaw2lin(audio_bytes, 2)  # ulaw to PCM16
         amplified_pcm = audioop.mul(pcm_audio, 2, GAIN)  # Amplify
         audio_bytes = audioop.lin2ulaw(amplified_pcm, 2)  # PCM16 back to ulaw
