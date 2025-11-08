@@ -190,6 +190,9 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                     "instructions": system_prompt,
                     "audio": {
                         "input": {
+                            "format": {
+                                "type": "audio/pcmu"
+                            },
                             "turn_detection": {
                                 "type": "semantic_vad",
                                 "eagerness": "medium",
@@ -197,7 +200,12 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                                 "interrupt_response": True
                             }
                         },
-                        "output" : { "voice": voice }
+                        "output" : { 
+                            "voice": voice,
+                            "format": {
+                                "type": "audio/pcmu"
+                            }  
+                        }
                     },
                     "tools": [
                     {
@@ -287,9 +295,9 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
             send_s2s_audio_chunk._chunk_count = 0
         global openai_sockets
         # Convert int16 PCM to float32 for encoding
-        import numpy as np
-        audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-        float32_array = audio_array.astype(np.float32) / 32767.0
+        #import numpy as np
+        #audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
+        #float32_array = audio_array.astype(np.float32) / 32767.0
         
         base64_chunk = base64_encode_audio(float32_array)
         event = {
