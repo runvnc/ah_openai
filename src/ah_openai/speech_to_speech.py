@@ -209,7 +209,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                                 "type": "server_vad",
                                 "threshold": 0.5,
                                 "prefix_padding_ms": 300,
-                                "silence_duration_ms": 500,
+                                "silence_duration_ms": 350,
                                 "create_response": True, 
                                 "interrupt_response": True
                             }
