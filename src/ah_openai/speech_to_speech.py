@@ -103,6 +103,7 @@ async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice
                 print()
                 print()
                 audio_bytes = base64.b64decode(server_event['delta'])
+                print(f"Audio chunk: {len(audio_bytes)} bytes, first 10 bytes: {audio_bytes[:10].hex()}")
                 
                 # Play locally if requested
                 if play_local:
