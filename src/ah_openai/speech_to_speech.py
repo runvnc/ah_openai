@@ -1,344 +1,110 @@
-import base64
-import json
-import struct
-import audioop
-import soundfile as sf
-import traceback
-# for playing local audio
-import time
-import asyncio
+"""
+OpenAI Speech-to-Speech (S2S) Realtime API Integration
+
+Optimized for low-latency audio streaming with:
+- TCP_NODELAY for immediate packet sends
+- Minimal buffer sizes (configurable)
+- Pre-encoded JSON for audio chunks
+- Native asyncio websockets (no threading)
+- Latency monitoring
+"""
 import os
-import websocket
-import sounddevice as sd
-import nanoid
-from lib.providers.services import service
-
-
+import asyncio
 import logging
-openai_sockets = {}
-# Store event loops for each session
-openai_loops = {}
-
-def float_to_16bit_pcm(float32_array):
-    clipped = [max(-1.0, min(1.0, x)) for x in float32_array]
-    pcm16 = b''.join(struct.pack('<h', int(x * 32767)) for x in clipped)
-    return pcm16
-
-def base64_encode_audio(float32_array):
-    pcm_bytes = float_to_16bit_pcm(float32_array)
-    encoded = base64.b64encode(pcm_bytes).decode('ascii')
-    return encoded
+from lib.providers.services import service
+from .s2s import connection, handlers, utils
 
 logger = logging.getLogger(__name__)
 
-files = [
-    #'/files/upd6/mr_verification_dashboard/audio/voicemailpadded.wav',
-    '/files/upd6/mr_verification_dashboard/audio/voicemailpadded2_24000_pcm.wav'
-]
-
-def send_wavs(ws):
-    try:
-        print("Top of send_wavs")
-        for filename in files:
-            data, samplerate = sf.read(filename, dtype='float32')
-            channel_data = data[:, 0] if data.ndim > 1 else data
-            #base64_chunk = base64.b64encode(channel_data.tobytes()).decode('ascii')
-            base64_chunk = base64_encode_audio(channel_data)
-
-            # Send the client event
-            event = {
-                "type": "input_audio_buffer.append",
-                "audio": base64_chunk
-            }
-            print("Sending audio data")
-            ws.send(json.dumps(event))
-            print('sent audio chunk')
-    except Exception as e:
-        trace = traceback.format_exc()
-        print(e)
-        print(trace)
-
 
 @service()
-async def start_s2s(model, system_prompt, on_command, on_audio_chunk=None, voice='marin',
-                    play_local=True, context=None, **kwargs):
+async def start_s2s(model=None, system_prompt="", on_command=None, on_audio_chunk=None, 
+                    voice='marin', play_local=True, context=None, buffer_size=4096, **kwargs):
     """
-        Start a speech-to-speech OpenAI realtime websocket session.
-        Session will be identified by context.log_id
+    Start a speech-to-speech OpenAI realtime websocket session.
+    Session will be identified by context.log_id
 
-        Arguments:
+    Arguments:
+        model: Model name (default: 'gpt-4o-realtime-preview-2024-10-01')
+        system_prompt: System instructions for the AI
+        on_command: Async callback for function calls from the server
+                   Signature: async def on_command(cmd_dict, context)
+        on_audio_chunk: Async callback for audio chunks from the server
+                       Signature: async def on_audio_chunk(audio_bytes, context)
+                       Audio format: int16 PCM at 24000 Hz sample rate
+        voice: OpenAI voice (alloy, echo, fable, onyx, nova, shimmer, marin)
+        play_local: Whether to play audio locally (default True)
+        buffer_size: TCP buffer size in bytes (default 4096 for low latency)
+                    Lower = lower latency but may drop on slow networks
+                    Recommended: 4096 (4KB), Aggressive: 2048, Extreme: 1024
+        context: MindRoot context object with log_id
 
-            model: model name, e.g. 'gpt-realtime'
-
-            system_prompt: system prompt string
-
-            on_command: async callback function to handle function call commands from the server.
-                        Arg 1: function name, arg 2: function parameters dict.
-
-            on_audio_chunk: async callback function to handle audio chunks from the server.
-                            Arg: audio bytes in int16 PCM format at 24000 Hz sample rate.
-
-            voice: OpenAI voice to use (alloy, echo, fable, onyx, nova, shimmer)
-
-            play_local: whether to play audio locally (default True)
-
+    Returns:
+        None (connection stored globally by log_id)
     """
-    global openai_sockets
-    global openai_loops
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-
-    url = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
-    headers = ["Authorization: Bearer " + OPENAI_API_KEY]
-
     if model is None:
-        model = 'gpt-realtime'
-        
-    async def on_message(ws, message):
-        try:
-            logger.debug(f"S2S_DEBUG: Received message from OpenAI")
-            server_event = json.loads(message)
-            print(f"Received server event: {server_event['type']}")
-            if server_event['type'] == "response.output_audio.delta":
-                print()
-                print("Audio chunk received !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                print()
-                print()
-                audio_bytes = base64.b64decode(server_event['delta'])
-                print(f"Audio chunk: {len(audio_bytes)} bytes, first 10 bytes: {audio_bytes[:10].hex()}")
-                
-                # Play locally if requested
-                if play_local:
-                    logger.info("S2S_DEBUG: Playing audio chunk locally")
-                    print("Playing audio chunk locally...")
-                    import numpy as np
-                    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
-                    sd.play(audio_array, 24000, blocking=True)
-                
-                # Call the audio chunk callback if provided
-                if on_audio_chunk:
-                    #logger.debug(f"S2S_DEBUG: Calling on_audio_chunk callback with {len(audio_bytes)} bytes")
-                    await on_audio_chunk(audio_bytes, context=context)
- 
-
-            elif server_event['type'] == "conversation.item.done":
-                print("Conversation item done received")
-                item = server_event['item']
-                if item['type'] == "function_call":
-                    print("Function call received:")
-                    try:
-                        arguments = json.loads(item['arguments'])
-                    except Exception as e:
-                        print("Error:",e)
-                        raise Exception("Error:" + str(e))
-                    try:
-                        if item['name'] != 'output':
-                            cmd_name = item['name']
-                            args = json.loads(item['arguments'])
-                            cmd = {}
-                            cmd[cmd_name] = args
-                            print("Invoking on_command callback for command:", str(cmd))
-                            await on_command(cmd, context=context)
-                        else:
-                            cmd = json.loads(arguments['text'])
-                            # if this is a list, loop over it
-                            if isinstance(cmd, list):
-                                for single_cmd in cmd:
-                                    print("Invoking on_command callback for command:", str(single_cmd))
-                                    await on_command(single_cmd, context=context)
-                            else:
-                                print("Invoking on_command callback for command:", str(cmd))
-                                await on_command(cmd, context=context)
-                    except Exception as e:
-                        print("Error in on_command callback:")
-                        trace = traceback.format_exc()
-                        print(e)
-                        print(trace)
-                        asyncio.sleep(0.5)
-                        err_content = ([{
-                            "type": "text",
-                            "text": f"[SYSTEM: Error executing command: {str(e)}\n{str(trace)}]"
-                        }])
-                        error_msg = { "role": "user", "content": content }
-                        await send_s2s_message(error_msg, context=context)
-                        #raise e
-            else:
-                print("received message:")
-                print(message)
-        except Exception as e:
-            trace = traceback.format_exc()
-            print(e)
-            print(trace)
-            raise e
-
-    def on_message_(ws, message):
-        # WebSocket runs in a thread pool, so we need to use the stored loop reference
-        try:
-            # Get the loop we stored when starting the session
-            loop = openai_loops.get(context.log_id)
-            if not loop:
-                raise Exception(f"No event loop found for session {context.log_id}")
-            asyncio.run_coroutine_threadsafe(on_message(ws, message), loop)
-        except Exception as e:
-            logger.error(f"Error in on_message_: {e}")
-
-
-    def on_open(ws):
-        try: 
-            print("OpenAI realtime websocket connected to server.")
-            session_update = {
-                "type": "session.update",
-                "session": {
-                    "type": "realtime",
-                    "instructions": system_prompt,
-                    "audio": {
-                        "input": {
-                            "format": {
-                                "type": "audio/pcmu"
-                            },
-                            "transcription": {
-                                "language": "en",
-                                "model": "gpt-4o-transcribe"
-                            },
-                            #"turn_detection": {
-                            #    "type": "semantic_vad",
-                            #    "eagerness": "high",
-                            #    "interrupt_response": True,
-                            #    "create_response": True, 
-                            #} 
-                            "turn_detection": {
-                                "type": "server_vad",
-                                "threshold": 0.5,
-                                "prefix_padding_ms": 300,
-                                "silence_duration_ms": 350,
-                                "create_response": True, 
-                                "interrupt_response": True
-                            }
-                        },
-                        "output" : { 
-                            "voice": voice,
-                            "format": {
-                                "type": "audio/pcmu"
-                            }  
-                        }
-                    },
-                    "tools": [
-                    {
-                        "type": "function",
-                        "name": "output",
-                        "description": "Call this function with JSON-encoded function calls if necessary.",
-                        "parameters": {
-                            "type": "object",
-                            "strict": True,
-                            "properties": {
-                                "text": {
-                                    "type": "string",
-                                    "description": "Properly escaped JSON for the command and arguments"
-                                }
-                            }
-                        }
-                    }
-                    ],
-                    "tool_choice": "auto"
-                }
-            #"event_id": "5fc543c4-f59c-420f-8fb9-68c45d1546a7a2"
-            }
-            ws.send(json.dumps(session_update))
-            #send_wavs(ws)
-            print("OpenAI realtime initialized session.")
-        except Exception as e:
-            trace = traceback.format_exc()
-            print(e)
-            print(trace)
-
-    ws = websocket.WebSocketApp(
-        url,
-        header=headers,
-        on_open=on_open,
-        on_message=on_message_,
+        model = 'gpt-4o-realtime-preview-2024-10-01'
+    
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+    if not OPENAI_API_KEY:
+        raise Exception("OPENAI_API_KEY environment variable not set")
+    
+    url = f"wss://api.openai.com/v1/realtime?model={model}"
+    
+    # Create optimized WebSocket connection
+    logger.info(f"Starting S2S session {context.log_id} with {buffer_size}B buffers")
+    ws = await connection.create_connection(url, OPENAI_API_KEY, buffer_size)
+    
+    # Initialize session with configuration
+    await connection.initialize_session(ws, system_prompt, voice)
+    
+    # Store connection for later use
+    connection.store_socket(context.log_id, ws)
+    
+    # Start message handler as background task
+    asyncio.create_task(
+        handlers.message_handler_loop(
+            ws, on_command, on_audio_chunk, play_local, context
+        )
     )
-    openai_sockets[context.log_id] = ws
-    # Store the current event loop for this session
-    openai_loops[context.log_id] = asyncio.get_event_loop()
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, ws.run_forever)
-
+    
+    logger.info(f"S2S session {context.log_id} started successfully")
 
 
 @service()
 async def send_s2s_message(message, context=None):
-    global openai_sockets
-    ws = openai_sockets.get(context.log_id)
-    if not ws:
-        raise Exception(f"No active OpenAI socket for log_id {context.log_id}")
-    parts = [] 
-    for item in message['content']:
-        print(f"item is {item}")
-        part = {}
-        if item['type'] == 'text':
-            part['type'] = 'input_text'
-            part['text'] = item['text']
-            parts.append(part)
-        else:
-            raise Exception("OpenAI s2s Unimplemented content part in message")
+    """
+    Send a text message to the OpenAI S2S session.
+    
+    Args:
+        message: Dict with 'role' and 'content' (list of content items)
+                Example: {"role": "user", "content": [{"type": "text", "text": "Hello"}]}
+        context: MindRoot context with log_id
+    """
+    ws = connection.get_socket(context.log_id)
+    await connection.send_message(ws, message, context)
 
-    event = {
-        "type": "conversation.item.create",
-        "item": {
-            "type": "message",
-            "role": "user",
-            "content": parts
-        },
-        "event_id": nanoid.generate()
-    }
-    ws.send(json.dumps(event))
-    ws.send(json.dumps({"type": "response.create"}))
-    print(f"Sent message to OpenAI s2s: {event}")
- 
 
 @service()
 async def send_s2s_audio_chunk(audio_bytes, context=None):
     """
-        Send an audio chunk to OpenAI for processing.
-        context.log_id identifies the session.
-
-        audio_bytes: bytes of audio data (ulaw format from PySIP)
+    Send an audio chunk to OpenAI for processing.
+    
+    Args:
+        audio_bytes: Audio data in ulaw format (from PySIP)
+        context: MindRoot context with log_id
     """
-    try:
-        if not hasattr(send_s2s_audio_chunk, '_chunk_count'):
-            send_s2s_audio_chunk._chunk_count = 0
-            send_s2s_audio_chunk._total_bytes = 0
-        global openai_sockets
-        
-        # Amplification disabled for testing - may not be needed after format fix
-        # GAIN = 1.3
-        # pcm_audio = audioop.ulaw2lin(audio_bytes, 2)
-        # amplified_pcm = audioop.mul(pcm_audio, 2, GAIN)
-        # audio_bytes = audioop.lin2ulaw(amplified_pcm, 2)
-        
-        # Audio is already in ulaw format from PySIP, just base64 encode it
-        base64_chunk = base64.b64encode(audio_bytes).decode('ascii')
-        event = {
-            "type": "input_audio_buffer.append",
-            "audio": base64_chunk
-        }
-        ws = openai_sockets.get(context.log_id)
-        #logger.debug(f"S2S_DEBUG: send_s2s_audio_chunk called, log_id={context.log_id if context else None}")
-        #logger.debug(f"S2S_DEBUG: WebSocket exists: {ws is not None}")
-        
-        send_s2s_audio_chunk._chunk_count += 1
-        send_s2s_audio_chunk._total_bytes += len(audio_bytes)
-        if send_s2s_audio_chunk._chunk_count % 50 == 0:
-            logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} chunks ({send_s2s_audio_chunk._total_bytes} bytes total, avg {send_s2s_audio_chunk._total_bytes//send_s2s_audio_chunk._chunk_count} bytes/chunk) to OpenAI")
-        
-        if ws:
-            ws.send(json.dumps(event))
-            #if send_s2s_audio_chunk._chunk_count % 50 == 0:
-            #    #logger.info(f"S2S_DEBUG: Sent {send_s2s_audio_chunk._chunk_count} audio chunks to OpenAI")
-        else:
-            logger.error(f"S2S_DEBUG: No active OpenAI socket for log_id {context.log_id}")
-            raise Exception(f"No active OpenAI socket for log_id {context.log_id}")
-    except Exception as e:
-        trace = traceback.format_exc()
-        print(e)
-        print(trace)
-        raise e
+    ws = connection.get_socket(context.log_id)
+    await connection.send_audio_chunk(ws, audio_bytes, context)
+
+
+@service()
+async def close_s2s_session(context=None):
+    """
+    Close an S2S session and clean up resources.
+    
+    Args:
+        context: MindRoot context with log_id
+    """
+    await connection.close_connection(context.log_id)
+    logger.info(f"S2S session {context.log_id} closed")
