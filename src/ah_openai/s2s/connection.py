@@ -39,7 +39,7 @@ async def create_connection(url, api_key, buffer_size=4096):
     # Connect with websockets library
     ws = await websockets.connect(
         url,
-        extra_headers={"Authorization": f"Bearer {api_key}"},
+        additional_headers={"Authorization": f"Bearer {api_key}"},
         ping_interval=None,  # Disable ping/pong for lower overhead
         max_size=10 * 1024 * 1024,  # 10MB max message size
     )
