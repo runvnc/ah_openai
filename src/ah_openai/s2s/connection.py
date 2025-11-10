@@ -79,18 +79,24 @@ async def initialize_session(ws, system_prompt, voice):
                     "format": {
                         "type": "audio/pcmu"
                     },
-                    "transcription": {
-                        "language": "en",
-                        "model": "gpt-4o-transcribe"
-                    },
                     "turn_detection": {
-                        "type": "server_vad",
-                        "threshold": 0.5,
-                        "prefix_padding_ms": 300,
-                        "silence_duration_ms": 350,
+                        "type": "semantic_vad",
+                        "eagerness": "high",
                         "create_response": True,
                         "interrupt_response": True
                     }
+                    #"transcription": {
+                    #    "language": "en",
+                    #    "model": "gpt-4o-transcribe"
+                    #},
+                    #"turn_detection": {
+                    #    "type": "server_vad",
+                    #    "threshold": 0.5,
+                    #    "prefix_padding_ms": 300,
+                    #    "silence_duration_ms": 350,
+                    #    "create_response": True,
+                    #    "interrupt_response": True
+                    #}
                 },
                 "output": {
                     "voice": voice,
