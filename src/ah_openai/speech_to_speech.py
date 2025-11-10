@@ -25,7 +25,7 @@ async def start_s2s(model=None, system_prompt="", on_command=None, on_audio_chun
     Session will be identified by context.log_id
 
     Arguments:
-        model: Model name (default: 'gpt-4o-realtime-preview-2024-10-01')
+        model: Model name (default: 'gpt-realtime')
         system_prompt: System instructions for the AI
         on_command: Async callback for function calls from the server
                    Signature: async def on_command(cmd_dict, context)
@@ -43,13 +43,18 @@ async def start_s2s(model=None, system_prompt="", on_command=None, on_audio_chun
         None (connection stored globally by log_id)
     """
     if model is None:
-        model = 'gpt-4o-realtime-preview-2024-10-01'
+        model = 'gpt-realtime'
     
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
     if not OPENAI_API_KEY:
         raise Exception("OPENAI_API_KEY environment variable not set")
     
     url = f"wss://api.openai.com/v1/realtime?model={model}"
+    
+    # Debug output
+    print(f"[S2S DEBUG] Connecting to OpenAI S2S")
+    print(f"[S2S DEBUG] Model: {model}")
+    print(f"[S2S DEBUG] URL: {url}")
     
     # Create optimized WebSocket connection
     logger.info(f"Starting S2S session {context.log_id} with {buffer_size}B buffers")
