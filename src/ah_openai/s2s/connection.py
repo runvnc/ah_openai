@@ -36,30 +36,25 @@ async def create_connection(url, api_key, buffer_size=4096):
     """
     logger.info(f"Creating S2S connection with {buffer_size} byte buffers")
     
-    # Create socket with low-latency optimizations
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    # CRITICAL: Disable Nagle's algorithm for immediate sends
-    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-    
-    # Set minimal buffers for low latency
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, buffer_size)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
-    
-    # Optional: Enable TCP quick ACK (Linux only)
-    try:
-        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
-    except (AttributeError, OSError):
-        pass  # Not available on all platforms
-    
-    # Connect with optimized socket
+    # Connect with websockets library
     ws = await websockets.connect(
         url,
         extra_headers={"Authorization": f"Bearer {api_key}"},
-        sock=sock,
         ping_interval=None,  # Disable ping/pong for lower overhead
         max_size=10 * 1024 * 1024,  # 10MB max message size
     )
+    
+    # Set socket options after connection
+    if hasattr(ws, 'transport') and ws.transport:
+        sock = ws.transport.get_extra_info('socket')
+        if sock:
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, buffer_size)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
+            try:
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
+            except (AttributeError, OSError):
+                pass
     
     logger.info("S2S WebSocket connected with low-latency optimizations enabled")
     return ws
