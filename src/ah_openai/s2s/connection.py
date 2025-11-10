@@ -79,6 +79,9 @@ async def initialize_session(ws, system_prompt, voice):
                     "format": {
                         "type": "audio/pcmu"
                     },
+                    "noise_reduction": {
+                        "type": "near_field"
+                    },
                     "turn_detection": {
                         "type": "semantic_vad",
                         "eagerness": "high",
