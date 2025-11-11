@@ -84,9 +84,10 @@ async def handle_transcript(server_event, on_transcript, context):
         item = server_event['item']
         role = item['role']
         transcript = None
-        
+        print("handle transcript") 
         # Extract transcript from content array for both roles
         for content_item in item.get('content', []):
+            print("content_item", str(content_item))
             if role == 'assistant' and content_item.get('type') == 'output_audio':
                 if 'transcript' in content_item:
                     transcript = content_item['transcript']
@@ -122,6 +123,8 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             if item['type'] == "function_call":
                 await handle_function_call(item, on_command, context)
             elif item['type'] == "message":
+                print("handling transcript:")
+                print(str(item))
                 await handle_transcript(server_event, on_transcript, context)
         else:
             # Log other message types for debugging
