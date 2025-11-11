@@ -70,7 +70,7 @@ async def start_s2s(model=None, system_prompt="", on_command=None, on_audio_chun
     # Start message handler as background task
     asyncio.create_task(
         handlers.message_handler_loop(
-            ws, on_command, on_audio_chunk, on_transcript, play_local, context
+            ws, on_command, on_audio_chunk, on_transcript, play_local, on_transcript, context
         )
     )
     
