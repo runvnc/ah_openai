@@ -149,7 +149,7 @@ async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on
     try:
         async for message in ws:
             server_event = json.loads(message)
-            await handle_message(server_event, on_command, on_audio_chunk, on_transcript, play_local, context)
+            await handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context)
             
     except websockets.exceptions.ConnectionClosed:
         logger.info(f"WebSocket connection closed for {context.log_id}")
