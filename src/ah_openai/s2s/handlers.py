@@ -79,13 +79,20 @@ async def handle_function_call(item, on_command, context):
 
 
 async def handle_transcript(server_event, on_transcript, context):
-    """Handle transcript from conversation.item.done events"""
+    """Handle transcript from conversation events"""
     try:
+        if 'transcript' in server_event:
+            transcript = server_event['transcript']
+            print("found uer transcript")
+            await on_transcript('user', transcript, context=context)
+            return
         item = server_event['item']
+
         role = item['role']
         transcript = None
         print("handle transcript") 
         # Extract transcript from content array for both roles
+
         for content_item in item.get('content', []):
             print("content_item", str(content_item))
             if role == 'assistant' and content_item.get('type') == 'output_audio':
@@ -118,6 +125,8 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         if event_type == "response.output_audio.delta":
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
             
+        elif event_type = "conversation.item.input_audio_transcription.completed":
+            await handle_transcript(server_event, on_transcript, context)
         elif event_type == "conversation.item.done":
             item = server_event['item']
             if item['type'] == "function_call":
