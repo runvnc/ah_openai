@@ -87,11 +87,11 @@ async def initialize_session(ws, system_prompt, voice):
                         "eagerness": "high",
                         "create_response": True,
                         "interrupt_response": True
-                    }
-                    #"transcription": {
-                    #    "language": "en",
-                    #    "model": "gpt-4o-transcribe"
-                    #},
+                    },
+                    "transcription": {
+                        "language": "en",
+                        "model": "gpt-4o-transcribe"
+                    },
                     #"turn_detection": {
                     #    "type": "server_vad",
                     #    "threshold": 0.5,
