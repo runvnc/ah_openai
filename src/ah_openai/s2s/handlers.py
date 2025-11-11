@@ -144,7 +144,6 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         logger.error(f"Error handling message: {e}")
         traceback.print_exc()
 
-
 async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context):
     """Background task to handle incoming WebSocket messages"""
     try:
