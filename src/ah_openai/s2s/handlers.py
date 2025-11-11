@@ -78,7 +78,37 @@ async def handle_function_call(item, on_command, context):
             logger.error(f"Failed to send error message: {send_error}")
 
 
-async def handle_message(server_event, on_command, on_audio_chunk, play_local, context):
+async def handle_transcript(server_event, on_transcript, context):
+    """Handle transcript from conversation.item.done events"""
+    try:
+        item = server_event['item']
+        role = item['role']
+        transcript = None
+        
+        # Extract transcript from content array for both roles
+        for content_item in item.get('content', []):
+            if role == 'assistant' and content_item.get('type') == 'output_audio':
+                if 'transcript' in content_item:
+                    transcript = content_item['transcript']
+                    break
+            elif role == 'user':
+                # User content might have transcript property or be input_text type
+                if 'transcript' in content_item:
+                    transcript = content_item['transcript']
+                    break
+                elif content_item.get('type') == 'input_text' and 'text' in content_item:
+                    transcript = content_item['text']
+                    break
+        
+        if transcript and on_transcript:
+            logger.info(f"Transcript from {role}: {transcript}")
+            await on_transcript(role, transcript, context=context)
+    except Exception as e:
+        logger.error(f"Error handling transcript: {e}")
+        traceback.print_exc()
+
+
+async def handle_message(server_event, on_command, on_audio_chunk, on_transcript, play_local, context):
     """Handle a single message from OpenAI"""
     try:
         event_type = server_event['type']
@@ -91,6 +121,8 @@ async def handle_message(server_event, on_command, on_audio_chunk, play_local, c
             item = server_event['item']
             if item['type'] == "function_call":
                 await handle_function_call(item, on_command, context)
+            elif item['type'] == "message":
+                await handle_transcript(server_event, on_transcript, context)
         else:
             # Log other message types for debugging
             logger.debug(f"Received message: {json.dumps(server_event, indent=2)}")
@@ -100,12 +132,12 @@ async def handle_message(server_event, on_command, on_audio_chunk, play_local, c
         traceback.print_exc()
 
 
-async def message_handler_loop(ws, on_command, on_audio_chunk, play_local, context):
+async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, play_local, context):
     """Background task to handle incoming WebSocket messages"""
     try:
         async for message in ws:
             server_event = json.loads(message)
-            await handle_message(server_event, on_command, on_audio_chunk, play_local, context)
+            await handle_message(server_event, on_command, on_audio_chunk, on_transcript, play_local, context)
             
     except websockets.exceptions.ConnectionClosed:
         logger.info(f"WebSocket connection closed for {context.log_id}")
