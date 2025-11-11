@@ -116,7 +116,7 @@ async def handle_transcript(server_event, on_transcript, context):
         traceback.print_exc()
 
 
-async def handle_message(server_event, on_command, on_audio_chunk, on_transcript, play_local, context):
+async def handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context):
     """Handle a single message from OpenAI"""
     try:
         event_type = server_event['type']
@@ -124,9 +124,10 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         
         if event_type == "response.output_audio.delta":
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
-            
         elif event_type == "conversation.item.input_audio_transcription.completed":
             await handle_transcript(server_event, on_transcript, context)
+        elif if response["type"] == "input_audio_buffer.speech_started":
+            await on_interrupt(server_event):
         elif event_type == "conversation.item.done":
             item = server_event['item']
             if item['type'] == "function_call":
@@ -144,7 +145,7 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         traceback.print_exc()
 
 
-async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, play_local, context):
+async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context):
     """Background task to handle incoming WebSocket messages"""
     try:
         async for message in ws:
