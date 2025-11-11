@@ -127,7 +127,7 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         elif event_type == "conversation.item.input_audio_transcription.completed":
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == "input_audio_buffer.speech_started":
-            await on_interrupt(server_event):
+            await on_interrupt(server_event)
         elif event_type == "conversation.item.done":
             item = server_event['item']
             if item['type'] == "function_call":
