@@ -125,7 +125,7 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         if event_type == "response.output_audio.delta":
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
             
-        elif event_type = "conversation.item.input_audio_transcription.completed":
+        elif event_type == "conversation.item.input_audio_transcription.completed":
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == "conversation.item.done":
             item = server_event['item']
