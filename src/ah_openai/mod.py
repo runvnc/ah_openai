@@ -4,6 +4,14 @@ import base64
 from io import BytesIO
 from openai import AsyncOpenAI
 import json
+import logging
+
+# Configure logging - suppress verbose output from websockets and ah_openai
+logging.getLogger('websockets').setLevel(logging.WARNING)  # Only warnings and errors
+logging.getLogger('websockets.client').setLevel(logging.WARNING)
+logging.getLogger('websockets.server').setLevel(logging.WARNING)
+logging.getLogger('ah_openai').setLevel(logging.WARNING)  # Only warnings and errors from this module
+logging.getLogger('openai').setLevel(logging.WARNING)  # Suppress OpenAI SDK logs
 
 last_messages = ""
 
