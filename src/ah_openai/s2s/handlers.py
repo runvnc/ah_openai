@@ -194,11 +194,11 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == "input_audio_buffer.speech_started":
             # User interrupted - stop audio pacer immediately
-            if context and context.log_id in _audio_pacers:
-                logger.info(f"Interrupt detected - stopping audio pacer for {context.log_id}")
-                await _audio_pacers[context.log_id].stop()
-                del _audio_pacers[context.log_id]
-            
+            #if context and context.log_id in _audio_pacers:
+            #    logger.info(f"Interrupt detected - stopping audio pacer for {context.log_id}")
+            #    #await _audio_pacers[context.log_id].stop()
+            #    #del _audio_pacers[context.log_id]
+            print("input audio buffer speech started (interrupt) in openai")
             await on_interrupt(server_event)
         elif event_type == "conversation.item.done":
             item = server_event['item']
