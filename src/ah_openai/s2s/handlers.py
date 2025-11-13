@@ -79,7 +79,7 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
         if on_audio_chunk and context:
             session_id = context.log_id
             #8000 bytes = 1 second
-            duration_seconds = audio_bytes/ 8000
+            duration_seconds = len(audio_bytes) / 8000
             await on_audio_chunk(audio_bytes, context)
             await asyncio.sleep(duration_seconds * 0.92)
             # Create pacer if it doesn't exist
