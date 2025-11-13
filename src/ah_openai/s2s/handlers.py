@@ -7,9 +7,60 @@ import traceback
 import asyncio
 import logging
 import websockets
+from collections import deque
+import time
 
 logger = logging.getLogger(__name__)
 
+# Global state for real-time audio pacing per session
+_audio_pacers = {}  # session_id -> AudioPacer
+
+class AudioPacer:
+    """Paces audio output to real-time speed with small buffer."""
+    def __init__(self, frame_size=320, frame_duration_ms=20):
+        self.frame_size = frame_size  # bytes per frame (320 bytes = 20ms at 24kHz int16)
+        self.frame_duration = frame_duration_ms / 1000.0  # seconds
+        self.buffer = deque(maxlen=3)  # 2-3 frame buffer
+        self.pacer_task = None
+        self.on_audio_chunk = None
+        self.context = None
+        self._running = False
+        
+    async def add_chunk(self, audio_bytes):
+        """Add audio chunk, split into frames and buffer."""
+        # Split chunk into frames
+        for i in range(0, len(audio_bytes), self.frame_size):
+            frame = audio_bytes[i:i+self.frame_size]
+            if len(frame) == self.frame_size:  # Only queue complete frames
+                self.buffer.append(frame)
+    
+    async def start_pacing(self, on_audio_chunk, context):
+        """Start real-time pacing task."""
+        self.on_audio_chunk = on_audio_chunk
+        self.context = context
+        self._running = True
+        self.pacer_task = asyncio.create_task(self._pace_loop())
+    
+    async def _pace_loop(self):
+        """Send buffered frames at real-time intervals."""
+        while self._running:
+            if len(self.buffer) >= 2:  # Wait for buffer to have at least 2 frames
+                frame = self.buffer.popleft()
+                await self.on_audio_chunk(frame, context=self.context)
+                await asyncio.sleep(self.frame_duration)  # Real-time pacing
+            else:
+                await asyncio.sleep(0.005)  # Check buffer frequently
+    
+    async def stop(self):
+        """Stop pacing and clear buffer."""
+        self._running = False
+        if self.pacer_task:
+            self.pacer_task.cancel()
+            try:
+                await self.pacer_task
+            except asyncio.CancelledError:
+                pass
+        self.buffer.clear()
 
 async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
     """Handle incoming audio delta from OpenAI"""
@@ -24,9 +75,20 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
             audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
             sd.play(audio_array, 24000, blocking=True)
         
-        # Call the audio chunk callback if provided
-        if on_audio_chunk:
-            await on_audio_chunk(audio_bytes, context=context)
+        # Use real-time pacer for SIP output
+        if on_audio_chunk and context:
+            session_id = context.log_id
+            
+            # Create pacer if it doesn't exist
+            if session_id not in _audio_pacers:
+                pacer = AudioPacer(frame_size=320, frame_duration_ms=20)
+                await pacer.start_pacing(on_audio_chunk, context)
+                _audio_pacers[session_id] = pacer
+                logger.info(f"Started audio pacer for session {session_id}")
+            
+            # Add chunk to pacer (will be sent at real-time speed)
+            await _audio_pacers[session_id].add_chunk(audio_bytes)
+            
     except Exception as e:
         logger.error(f"Error handling audio delta: {e}")
         traceback.print_exc()
@@ -127,6 +189,12 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         elif event_type == "conversation.item.input_audio_transcription.completed":
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == "input_audio_buffer.speech_started":
+            # User interrupted - stop audio pacer immediately
+            if context and context.log_id in _audio_pacers:
+                logger.info(f"Interrupt detected - stopping audio pacer for {context.log_id}")
+                await _audio_pacers[context.log_id].stop()
+                del _audio_pacers[context.log_id]
+            
             await on_interrupt(server_event)
         elif event_type == "conversation.item.done":
             item = server_event['item']
@@ -156,3 +224,9 @@ async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on
     except Exception as e:
         logger.error(f"Error in message handler loop: {e}")
         traceback.print_exc()
+    finally:
+        # Clean up audio pacer on session end
+        if context and context.log_id in _audio_pacers:
+            logger.info(f"Cleaning up audio pacer for {context.log_id}")
+            await _audio_pacers[context.log_id].stop()
+            del _audio_pacers[context.log_id]
