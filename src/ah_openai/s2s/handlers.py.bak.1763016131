@@ -13,81 +13,45 @@ import time
 logger = logging.getLogger(__name__)
 
 # Global state for real-time audio pacing per session
-_audio_pacers = {}          # session_id -> AudioPacer
-_stream_cold_start = {}     # session_id -> bool (True when a new assistant output stream is starting)
+_audio_pacers = {}  # session_id -> AudioPacer
 
 class AudioPacer:
-    """Paces audio in 20 ms frames with a tiny warm-up to smooth onset artifacts."""
-    FRAME_SIZE = 160  # 20 ms @ 8 kHz ulaw (1 byte/sample)
-    WARMUP_FRAMES = 3
-
+    """Paces audio chunks to real-time speed with small buffer."""
     def __init__(self):
-        # Store raw incoming bytes; we will slice to 160-byte frames internally
-        self.buffer = deque()
-        self.frame_buffer = deque()  # holds 160-byte frames ready to emit
+        self.buffer = deque()  # Unlimited buffer, but we'll control additions
         self.pacer_task = None
         self.on_audio_chunk = None
         self.context = None
         self._running = False
-        self._in_warmup = True
-        self._last_activity = 0.0
+        
+    async def add_chunk(self, audio_bytes):
+        """Add audio chunk to buffer with backpressure."""
+        # Non-blocking add - let buffer grow naturally
+        # Pacer will consume at real-time rate
+        if self._running:
+            self.buffer.append(audio_bytes)
     
-    async def add_chunk(self, audio_bytes: bytes):
-        """Add a raw ulaw chunk; it may be larger (e.g., ~250 ms)."""
-        if not self._running:
-            return
-        self.buffer.append(audio_bytes)
-        self._last_activity = time.monotonic()
-        # Slice into 160-byte frames and stage into frame_buffer
-        while self.buffer:
-            chunk = self.buffer.popleft()
-            # Accumulate any remainder from previous partials
-            i = 0
-            L = len(chunk)
-            while i + self.FRAME_SIZE <= L:
-                self.frame_buffer.append(chunk[i:i + self.FRAME_SIZE])
-                i += self.FRAME_SIZE
-            # If there's a tail <160, keep it for next append by pushing back
-            if i < L:
-                # put tail back at the front of buffer to combine with next chunk
-                self.buffer.appendleft(chunk[i:])
-                break
-    
-    async def start_pacing(self, on_audio_chunk, context, cold_start=True):
-        """Start real-time pacing task with optional cold-start warm-up."""
+    async def start_pacing(self, on_audio_chunk, context):
+        """Start real-time pacing task."""
         self.on_audio_chunk = on_audio_chunk
         self.context = context
         self._running = True
-        self._in_warmup = bool(cold_start)
-        self._last_activity = time.monotonic()
         self.pacer_task = asyncio.create_task(self._pace_loop())
     
     async def _pace_loop(self):
-        """Emit exactly one 20 ms frame every 20 ms; during warm-up, wait until at least WARMUP_FRAMES are buffered."""
-        TICK = 0.02
+        """Send buffered chunks at real-time intervals."""
         while self._running:
-            if self._in_warmup:
-                # Wait until we have warm-up frames; if not, quickly poll
-                if len(self.frame_buffer) < self.WARMUP_FRAMES:
-                    await asyncio.sleep(0.005)
-                    continue
-                # Exit warm-up after we have the minimum frames
-                self._in_warmup = False
-            
-            # If we have a frame, send exactly one per 20 ms
-            if self.frame_buffer:
-                frame = self.frame_buffer.popleft()
-                try:
-                    await self.on_audio_chunk(frame, context=self.context)
-                except Exception as e:
-                    logger.error(f"AudioPacer emit error: {e}")
-                await asyncio.sleep(TICK)
+            if len(self.buffer) > 0:
+                chunk = self.buffer.popleft()
+                # Calculate duration: 8000 bytes/sec for ulaw 8kHz
+                duration = len(chunk) / 8000.0
+                await self.on_audio_chunk(chunk, context=self.context)
+                await asyncio.sleep(duration)  # Real-time pacing based on chunk size
             else:
-                # No frames ready; short sleep to avoid busy loop
-                await asyncio.sleep(0.005)
+                await asyncio.sleep(0.005)  # Check buffer frequently
     
     async def stop(self):
-        """Stop pacing and clear buffers."""
+        """Stop pacing and clear buffer."""
         self._running = False
         if self.pacer_task:
             self.pacer_task.cancel()
@@ -96,8 +60,6 @@ class AudioPacer:
             except asyncio.CancelledError:
                 pass
         self.buffer.clear()
-        self.frame_buffer.clear()
-        self._in_warmup = True
 
 async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
     """Handle incoming audio delta from OpenAI"""
@@ -111,18 +73,15 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
             audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
             sd.play(audio_array, 24000, blocking=True)
         
-        # Use real-time pacer for SIP output (ulaw 8 kHz expected per session config)
+        # Use real-time pacer for SIP output
         if on_audio_chunk and context:
             session_id = context.log_id
             # Create pacer if it doesn't exist
             if session_id not in _audio_pacers:
                 pacer = AudioPacer()
-                cold = _stream_cold_start.get(session_id, True)
-                await pacer.start_pacing(on_audio_chunk, context, cold_start=cold)
+                await pacer.start_pacing(on_audio_chunk, context)
                 _audio_pacers[session_id] = pacer
                 logger.info(f"Started audio pacer for session {session_id}")
-                # Once started, clear cold-start flag
-                _stream_cold_start[session_id] = False
             
             # Add chunk to pacer (will be sent at real-time speed)
             await _audio_pacers[session_id].add_chunk(audio_bytes)
@@ -231,9 +190,7 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
                 logger.info(f"Interrupt detected - stopping audio pacer for {context.log_id}")
                 await _audio_pacers[context.log_id].stop()
                 del _audio_pacers[context.log_id]
-            # Mark next stream as cold start to enable warm-up pacing
-            if context:
-                _stream_cold_start[context.log_id] = True
+            
             await on_interrupt(server_event)
         elif event_type == "conversation.item.done":
             item = server_event['item']
@@ -243,18 +200,6 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
                 print("handling transcript:")
                 print(str(item))
                 await handle_transcript(server_event, on_transcript, context)
-                # If assistant message is done, mark next output as a cold start
-                try:
-                    role = item.get('role')
-                    if role == 'assistant' and context:
-                        _stream_cold_start[context.log_id] = True
-                        # Optionally stop existing pacer to reset state cleanly
-                        if context.log_id in _audio_pacers:
-                            await _audio_pacers[context.log_id].stop()
-                            del _audio_pacers[context.log_id]
-                            logger.info(f"Stopped pacer at assistant item end for {context.log_id}")
-                except Exception:
-                    pass
         else:
             # Log other message types for debugging
             logger.debug(f"Received message: {json.dumps(server_event, indent=2)}")
@@ -281,5 +226,3 @@ async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on
             logger.info(f"Cleaning up audio pacer for {context.log_id}")
             await _audio_pacers[context.log_id].stop()
             del _audio_pacers[context.log_id]
-        if context:
-            _stream_cold_start[context.log_id] = True
