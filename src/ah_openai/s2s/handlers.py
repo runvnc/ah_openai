@@ -26,10 +26,10 @@ class AudioPacer:
         
     async def add_chunk(self, audio_bytes):
         """Add audio chunk to buffer with backpressure."""
-        # Wait if buffer is getting too large (more than 2 chunks = ~500ms)
-        while len(self.buffer) >= 2 and self._running:
-            await asyncio.sleep(0.005)
-        self.buffer.append(audio_bytes)
+        # Non-blocking add - let buffer grow naturally
+        # Pacer will consume at real-time rate
+        if self._running:
+            self.buffer.append(audio_bytes)
     
     async def start_pacing(self, on_audio_chunk, context):
         """Start real-time pacing task."""
