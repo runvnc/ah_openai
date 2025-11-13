@@ -16,23 +16,20 @@ logger = logging.getLogger(__name__)
 _audio_pacers = {}  # session_id -> AudioPacer
 
 class AudioPacer:
-    """Paces audio output to real-time speed with small buffer."""
-    def __init__(self, frame_size=320, frame_duration_ms=20):
-        self.frame_size = frame_size  # bytes per frame (320 bytes = 20ms at 24kHz int16)
-        self.frame_duration = frame_duration_ms / 1000.0  # seconds
-        self.buffer = deque(maxlen=3)  # 2-3 frame buffer
+    """Paces audio chunks to real-time speed with small buffer."""
+    def __init__(self):
+        self.buffer = deque()  # Unlimited buffer, but we'll control additions
         self.pacer_task = None
         self.on_audio_chunk = None
         self.context = None
         self._running = False
         
     async def add_chunk(self, audio_bytes):
-        """Add audio chunk, split into frames and buffer."""
-        # Split chunk into frames
-        for i in range(0, len(audio_bytes), self.frame_size):
-            frame = audio_bytes[i:i+self.frame_size]
-            if len(frame) == self.frame_size:  # Only queue complete frames
-                self.buffer.append(frame)
+        """Add audio chunk to buffer with backpressure."""
+        # Wait if buffer is getting too large (more than 2 chunks = ~500ms)
+        while len(self.buffer) >= 2 and self._running:
+            await asyncio.sleep(0.005)
+        self.buffer.append(audio_bytes)
     
     async def start_pacing(self, on_audio_chunk, context):
         """Start real-time pacing task."""
@@ -42,12 +39,14 @@ class AudioPacer:
         self.pacer_task = asyncio.create_task(self._pace_loop())
     
     async def _pace_loop(self):
-        """Send buffered frames at real-time intervals."""
+        """Send buffered chunks at real-time intervals."""
         while self._running:
-            if len(self.buffer) >= 2:  # Wait for buffer to have at least 2 frames
-                frame = self.buffer.popleft()
-                await self.on_audio_chunk(frame, context=self.context)
-                await asyncio.sleep(self.frame_duration)  # Real-time pacing
+            if len(self.buffer) > 0:
+                chunk = self.buffer.popleft()
+                # Calculate duration: 8000 bytes/sec for ulaw 8kHz
+                duration = len(chunk) / 8000.0
+                await self.on_audio_chunk(chunk, context=self.context)
+                await asyncio.sleep(duration)  # Real-time pacing based on chunk size
             else:
                 await asyncio.sleep(0.005)  # Check buffer frequently
     
@@ -84,7 +83,7 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
             
             # Create pacer if it doesn't exist
             if session_id not in _audio_pacers:
-                pacer = AudioPacer(frame_size=160, frame_duration_ms=20)
+                pacer = AudioPacer()
                 await pacer.start_pacing(on_audio_chunk, context)
                 _audio_pacers[session_id] = pacer
                 logger.info(f"Started audio pacer for session {session_id}")
