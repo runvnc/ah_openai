@@ -81,17 +81,16 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
             #8000 bytes = 1 second
             duration_seconds = len(audio_bytes) / 8000
             print(">>>> duration seconds:", duration_seconds)
-            await on_audio_chunk(audio_bytes, context)
-            await asyncio.sleep(duration_seconds * 0.92)
+            
             # Create pacer if it doesn't exist
-            #if session_id not in _audio_pacers:
-            #    pacer = AudioPacer(frame_size=160, frame_duration_ms=20)
-            #    await pacer.start_pacing(on_audio_chunk, context)
-            #    _audio_pacers[session_id] = pacer
-            #    logger.info(f"Started audio pacer for session {session_id}")
+            if session_id not in _audio_pacers:
+                pacer = AudioPacer(frame_size=160, frame_duration_ms=20)
+                await pacer.start_pacing(on_audio_chunk, context)
+                _audio_pacers[session_id] = pacer
+                logger.info(f"Started audio pacer for session {session_id}")
             
             # Add chunk to pacer (will be sent at real-time speed)
-            #await _audio_pacers[session_id].add_chunk(audio_bytes)
+            await _audio_pacers[session_id].add_chunk(audio_bytes)
             
     except Exception as e:
         logger.error(f"Error handling audio delta: {e}")
@@ -193,13 +192,14 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         elif event_type == "conversation.item.input_audio_transcription.completed":
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == "input_audio_buffer.speech_started":
+            print("!!!! input_audio_buffer.speech_started - INTERRUPT DETECTED !!!!")
             # User interrupted - stop audio pacer immediately
-            #if context and context.log_id in _audio_pacers:
-            #    logger.info(f"Interrupt detected - stopping audio pacer for {context.log_id}")
-            #    #await _audio_pacers[context.log_id].stop()
-            #    #del _audio_pacers[context.log_id]
-            print("input audio buffer speech started (interrupt) in openai")
-            #await on_interrupt(server_event)
+            if context and context.log_id in _audio_pacers:
+                logger.info(f"Interrupt detected - stopping audio pacer for {context.log_id}")
+                await _audio_pacers[context.log_id].stop()
+                del _audio_pacers[context.log_id]
+            
+            await on_interrupt(server_event)
         elif event_type == "conversation.item.done":
             item = server_event['item']
             if item['type'] == "function_call":
