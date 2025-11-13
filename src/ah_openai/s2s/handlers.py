@@ -81,7 +81,7 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
             
             # Create pacer if it doesn't exist
             if session_id not in _audio_pacers:
-                pacer = AudioPacer(frame_size=320, frame_duration_ms=20)
+                pacer = AudioPacer(frame_size=160, frame_duration_ms=20)
                 await pacer.start_pacing(on_audio_chunk, context)
                 _audio_pacers[session_id] = pacer
                 logger.info(f"Started audio pacer for session {session_id}")
