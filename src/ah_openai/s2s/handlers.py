@@ -78,16 +78,19 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
         # Use real-time pacer for SIP output
         if on_audio_chunk and context:
             session_id = context.log_id
-            
+            #8000 bytes = 1 second
+            duration_seconds = audio_bytes/ 8000
+            await on_audio_chunk(audio_bytes, context)
+            await asyncio.sleep(duration_seconds * 0.92)
             # Create pacer if it doesn't exist
-            if session_id not in _audio_pacers:
-                pacer = AudioPacer(frame_size=160, frame_duration_ms=20)
-                await pacer.start_pacing(on_audio_chunk, context)
-                _audio_pacers[session_id] = pacer
-                logger.info(f"Started audio pacer for session {session_id}")
+            #if session_id not in _audio_pacers:
+            #    pacer = AudioPacer(frame_size=160, frame_duration_ms=20)
+            #    await pacer.start_pacing(on_audio_chunk, context)
+            #    _audio_pacers[session_id] = pacer
+            #    logger.info(f"Started audio pacer for session {session_id}")
             
             # Add chunk to pacer (will be sent at real-time speed)
-            await _audio_pacers[session_id].add_chunk(audio_bytes)
+            #await _audio_pacers[session_id].add_chunk(audio_bytes)
             
     except Exception as e:
         logger.error(f"Error handling audio delta: {e}")
