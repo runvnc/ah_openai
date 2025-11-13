@@ -67,7 +67,6 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
         audio_bytes = base64.b64decode(server_event['delta'])
         logger.debug(f"Audio chunk: {len(audio_bytes)} bytes")
         
-        # Play locally if requested
         if play_local:
             import numpy as np
             import sounddevice as sd
@@ -77,10 +76,6 @@ async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
         # Use real-time pacer for SIP output
         if on_audio_chunk and context:
             session_id = context.log_id
-            #8000 bytes = 1 second
-            duration_seconds = len(audio_bytes) / 8000
-            print(">>>> duration seconds:", duration_seconds)
-            
             # Create pacer if it doesn't exist
             if session_id not in _audio_pacers:
                 pacer = AudioPacer()
@@ -184,14 +179,12 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
     """Handle a single message from OpenAI"""
     try:
         event_type = server_event['type']
-        print(f"Received server event: {event_type}")
         
         if event_type == "response.output_audio.delta":
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
         elif event_type == "conversation.item.input_audio_transcription.completed":
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == "input_audio_buffer.speech_started":
-            print("!!!! input_audio_buffer.speech_started - INTERRUPT DETECTED !!!!")
             # User interrupted - stop audio pacer immediately
             if context and context.log_id in _audio_pacers:
                 logger.info(f"Interrupt detected - stopping audio pacer for {context.log_id}")
