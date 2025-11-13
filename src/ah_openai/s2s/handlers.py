@@ -186,7 +186,7 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
     """Handle a single message from OpenAI"""
     try:
         event_type = server_event['type']
-        logger.debug(f"Received server event: {event_type}")
+        print(f"Received server event: {event_type}")
         
         if event_type == "response.output_audio.delta":
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
@@ -199,7 +199,7 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             #    #await _audio_pacers[context.log_id].stop()
             #    #del _audio_pacers[context.log_id]
             print("input audio buffer speech started (interrupt) in openai")
-            await on_interrupt(server_event)
+            #await on_interrupt(server_event)
         elif event_type == "conversation.item.done":
             item = server_event['item']
             if item['type'] == "function_call":
