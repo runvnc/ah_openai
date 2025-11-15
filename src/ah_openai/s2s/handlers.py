@@ -36,11 +36,13 @@ class AudioPacer:
         self.on_audio_chunk = on_audio_chunk
         self.context = context
         self._running = True
+        print("Creating pace loop...")
         self.pacer_task = asyncio.create_task(self._pace_loop())
     
     async def _pace_loop(self):
         """Send buffered chunks at real-time intervals."""
         while self._running:
+            print("Pacing audio...")
             if len(self.buffer) > 0:
                 chunk = self.buffer.popleft()
                 # Calculate duration: 8000 bytes/sec for ulaw 8kHz
@@ -48,7 +50,8 @@ class AudioPacer:
                 await self.on_audio_chunk(chunk, context=self.context)
                 await asyncio.sleep(duration)  # Real-time pacing based on chunk size
             else:
-                await asyncio.sleep(0.005)  # Check buffer frequently
+                await asyncio.sleep(0.1)  # Check buffer frequently
+                #await asyncio.sleep(0.005)  # Check buffer frequently
     
     async def stop(self):
         """Stop pacing and clear buffer."""
@@ -219,6 +222,7 @@ async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on
             logger.info(f"Started audio pacer for session {session_id}")
 
         async for message in ws:
+            print("Received message from WebSocket")
             server_event = json.loads(message)
             await handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context)
             await asyncio.sleep(0.025)  # Yield to event loop
