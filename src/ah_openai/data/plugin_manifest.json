@@ -1,0 +1,95 @@
+{
+  "plugins": {
+    "core": {
+      "admin": {
+        "enabled": true,
+        "source": "core"
+      },
+      "index": {
+        "enabled": true,
+        "source": "core"
+      },
+      "chat": {
+        "enabled": true,
+        "source": "core"
+      },
+      "chat_avatar": {
+        "enabled": true,
+        "source": "core"
+      },
+      "agent": {
+        "enabled": true,
+        "source": "core"
+      },
+      "l8n": {
+        "enabled": true,
+        "source": "core"
+      },
+      "jwt_auth": {
+        "enabled": true,
+        "source": "core"
+      },
+      "mcp_": {
+        "enabled": true,
+        "source": "core"
+      },
+      "api_keys": {
+        "enabled": true,
+        "source": "core"
+      },
+      "home": {
+        "enabled": true,
+        "source": "core"
+      },
+      "login": {
+        "enabled": true,
+        "source": "core"
+      },
+      "persona": {
+        "enabled": true,
+        "source": "core"
+      },
+      "events": {
+        "enabled": true,
+        "source": "core"
+      },
+      "signup": {
+        "enabled": false,
+        "source": "core"
+      },
+      "email": {
+        "enabled": true,
+        "source": "core"
+      },
+      "user_service": {
+        "enabled": true,
+        "source": "core"
+      },
+      "env_manager": {
+        "enabled": true,
+        "source": "core"
+      },
+      "check_list": {
+        "enabled": true,
+        "source": "core"
+      },
+      "usage": {
+        "enabled": true,
+        "source": "core"
+      },
+      "credits": {
+        "enabled": false,
+        "source": "core"
+      },
+      "subscriptions": {
+        "enabled": false,
+        "source": "core"
+      },
+      "startup": {
+        "enabled": true,
+        "source": "core"
+      }
+    },
+    "installed": {}
+  }
+}
