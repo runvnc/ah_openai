@@ -30,6 +30,7 @@ class AudioPacer:
         # Pacer will consume at real-time rate
         if self._running:
             self.buffer.append(audio_bytes)
+            asyncio.sleep(0.001)  # Yield to event loop
     
     async def start_pacing(self, on_audio_chunk, context):
         """Start real-time pacing task."""
