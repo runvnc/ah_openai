@@ -49,6 +49,7 @@ class AudioPacer:
                 # Calculate duration: 8000 bytes/sec for ulaw 8kHz
                 duration = len(chunk) / 8000.0
                 print(f"Sending chunk of size {len(chunk)} bytes, duration {duration} seconds")
+                print(f"Current buffer size: {len(self.buffer)}")
                 await self.on_audio_chunk(chunk, context=self.context)
                 print(f"Paced chunk of {len(chunk)} bytes, sleeping for {duration} seconds")
                 await asyncio.sleep(duration)  # Real-time pacing based on chunk size
