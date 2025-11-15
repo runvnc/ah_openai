@@ -47,13 +47,13 @@ class AudioPacer:
                 chunk = self.buffer.popleft()
                 # Calculate duration: 8000 bytes/sec for ulaw 8kHz
                 duration = len(chunk) / 8000.0
+                print(f"Sending chunk of size {len(chunk)} bytes, duration {duration} seconds")
                 await self.on_audio_chunk(chunk, context=self.context)
                 print(f"Paced chunk of {len(chunk)} bytes, sleeping for {duration} seconds")
                 await asyncio.sleep(duration)  # Real-time pacing based on chunk size
             else:
                 print("Buffer empty, waiting 0.1 for chunks...")
-                await asyncio.sleep(0.1)  # Check buffer frequently
-                #await asyncio.sleep(0.005)  # Check buffer frequently
+                await asyncio.sleep(0.005)  # Check buffer frequently
     
     async def stop(self):
         """Stop pacing and clear buffer."""
