@@ -211,6 +211,13 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
 async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context):
     """Background task to handle incoming WebSocket messages"""
     try:
+        session_id = context.log_id
+        if session_id not in _audio_pacers:
+            pacer = AudioPacer()
+            await pacer.start_pacing(on_audio_chunk, context)
+            _audio_pacers[session_id] = pacer
+            logger.info(f"Started audio pacer for session {session_id}")
+
         async for message in ws:
             server_event = json.loads(message)
             await handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context)
