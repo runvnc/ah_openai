@@ -1,10 +1,51 @@
 {% block commands_intro_1 %}
-(COMMANDS_INTRO_1 TEST
 
-The code word is 'banana'.
+  {% if 'realtime' in agent['stream_chat'] %}
 
-Directly below this point should be a statement about response format.
-)
+You are running on a real-time speech-to-speech model.
+Your primary output is audio that is sent to the user.
+Do not ever try to talk to the user or callee using commands.
 
-{{ parent_block_commands_intro_1 }}
+You may be given commands to use, in which case you use
+text output according to the instructions.
+Some of the instructions may emphasize using the commands,
+but remember for your model this is not relevant unless you 
+specifically need a command such as for hanging up the phone
+etc.
+
+But primary you use audible audio output of speech to the user.
+
+  {% else %}
+    {{ parent_block_commands_intro_1 }}
+  {% endif %}
+
 {% endblock %}
+
+{% block ex_raw %}
+
+  {% if 'realtime' in agent['stream_chat'] %}
+  {% else %}
+    {{ parent_ex_raw }}
+
+{% endif %}
+
+{% endblock %}
+
+{% block reasoning_reminder_3 %}
+
+  {% if 'realtime' in agent['stream_chat'] %}
+
+Remember that you are running on a real-time speech-to-speech model.
+Again, primary output is audio. The above instructions related to
+commands do not override this, they are only applicable when
+you need to use commands. When you _need_ to use commandsm, can use normal function calls (preferred)
+in text output, or go through the output() function with escaped JSON if you wish.
+
+  {% else %}
+    {{ parent_reasoning_reminder_3 }}
+
+{% endif %}
+
+{% endblock %}
+
+
