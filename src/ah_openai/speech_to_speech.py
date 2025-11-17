@@ -13,14 +13,10 @@ import asyncio
 import logging
 from lib.providers.services import service
 from .s2s import connection, handlers, utils
-
 logger = logging.getLogger(__name__)
 
-
 @service()
-async def start_s2s(model=None, system_prompt="", on_command=None, on_audio_chunk=None, 
-                    on_transcript=None, on_interrupt=None, voice='marin', play_local=False, 
-                    context=None, buffer_size=4096, **kwargs):
+async def start_s2s(model=None, system_prompt='', on_command=None, on_audio_chunk=None, on_transcript=None, on_interrupt=None, voice='marin', play_local=False, context=None, buffer_size=4096, **kwargs):
     """
     Start a speech-to-speech OpenAI realtime websocket session.
     Session will be identified by context.log_id
@@ -45,37 +41,16 @@ async def start_s2s(model=None, system_prompt="", on_command=None, on_audio_chun
     """
     if model is None:
         model = 'gpt-realtime'
-    
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     if not OPENAI_API_KEY:
-        raise Exception("OPENAI_API_KEY environment variable not set")
-    
-    url = f"wss://api.openai.com/v1/realtime?model={model}"
-    
-    # Debug output
-    print(f"[S2S DEBUG] Connecting to OpenAI S2S")
-    print(f"[S2S DEBUG] Model: {model}")
-    print(f"[S2S DEBUG] URL: {url}")
-    
-    # Create optimized WebSocket connection
-    logger.info(f"Starting S2S session {context.log_id} with {buffer_size}B buffers")
+        raise Exception('OPENAI_API_KEY environment variable not set')
+    url = f'wss://api.openai.com/v1/realtime?model={model}'
+    logger.info(f'Starting S2S session {context.log_id} with {buffer_size}B buffers')
     ws = await connection.create_connection(url, OPENAI_API_KEY, buffer_size)
-    
-    # Initialize session with configuration
     await connection.initialize_session(ws, system_prompt, voice)
-    
-    # Store connection for later use
     connection.store_socket(context.log_id, ws)
-    
-    # Start message handler as background task
-    asyncio.create_task(
-        handlers.message_handler_loop(
-            ws, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context
-        )
-    )
-    
-    logger.info(f"S2S session {context.log_id} started successfully")
-
+    asyncio.create_task(handlers.message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context))
+    logger.info(f'S2S session {context.log_id} started successfully')
 
 @service()
 async def send_s2s_message(message, context=None):
@@ -90,7 +65,6 @@ async def send_s2s_message(message, context=None):
     ws = connection.get_socket(context.log_id)
     await connection.send_message(ws, message, context)
 
-
 @service()
 async def send_s2s_audio_chunk(audio_bytes, context=None):
     """
@@ -103,7 +77,6 @@ async def send_s2s_audio_chunk(audio_bytes, context=None):
     ws = connection.get_socket(context.log_id)
     await connection.send_audio_chunk(ws, audio_bytes, context)
 
-
 @service()
 async def close_s2s_session(context=None):
     """
@@ -113,4 +86,4 @@ async def close_s2s_session(context=None):
         context: MindRoot context with log_id
     """
     await connection.close_connection(context.log_id)
-    logger.info(f"S2S session {context.log_id} closed")
+    logger.info(f'S2S session {context.log_id} closed')
