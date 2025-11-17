@@ -26,7 +26,7 @@ class AudioPacer:
         """Add audio chunk to buffer with backpressure."""
         if self._running:
             self.buffer.append(audio_bytes)
-            await asyncio.sleep(0.0001)
+            await asyncio.sleep(0.0003)
 
     async def start_pacing(self, on_audio_chunk, context):
         """Start real-time pacing task."""
@@ -44,7 +44,7 @@ class AudioPacer:
                 await self.on_audio_chunk(chunk, context=self.context)
                 await asyncio.sleep(duration)
             else:
-                await asyncio.sleep(0.0035)
+                await asyncio.sleep(0.01)
 
     async def stop(self):
         """Stop pacing and clear buffer."""
