@@ -41,6 +41,7 @@ class AudioPacer:
             if len(self.buffer) > 0:
                 chunk = self.buffer.popleft()
                 duration = len(chunk) / 8000.0
+                duration *= 0.95  # Slightly faster than real-time
                 await self.on_audio_chunk(chunk, context=self.context)
                 await asyncio.sleep(duration)
             else:
