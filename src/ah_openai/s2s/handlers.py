@@ -25,6 +25,8 @@ class AudioPacer:
         # Absolute timing for precise pacing
         self.start_time = None
         self.bytes_sent = 0
+        self.audio_start_time = None  # When first audio chunk received
+        self.total_bytes_received = 0  # Total bytes received from OpenAI
         self.playback_rate = 1.0  # Real-time playback (configurable)
 
     async def add_chunk(self, audio_bytes):
@@ -32,6 +34,12 @@ class AudioPacer:
         if self._running:
             self.buffer.append(audio_bytes)
             #await asyncio.sleep(0.0002)
+            
+            # Track when first audio arrives
+            if self.audio_start_time is None:
+                self.audio_start_time = time.perf_counter()
+            
+            self.total_bytes_received += len(audio_bytes)
 
     async def start_pacing(self, on_audio_chunk, context):
         """Start real-time pacing task."""
@@ -61,7 +69,15 @@ class AudioPacer:
                 chunk = self.buffer.popleft()
                 
                 # Send the chunk
-                await self.on_audio_chunk(chunk, context=self.context)
+                # Calculate timestamp for this chunk based on when it should play
+                # Timestamp is relative to when first audio was received
+                if self.audio_start_time:
+                    # Calculate when this chunk should start playing
+                    chunk_timestamp = self.audio_start_time + (self.bytes_sent / 8000.0)
+                    await self.on_audio_chunk(chunk, timestamp=chunk_timestamp, context=self.context)
+                else:
+                    # Fallback if no start time (shouldn't happen)
+                    await self.on_audio_chunk(chunk, context=self.context)
                 
                 # Update bytes sent counter
                 self.bytes_sent += len(chunk)
