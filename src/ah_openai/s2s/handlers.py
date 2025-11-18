@@ -26,7 +26,7 @@ class AudioPacer:
         """Add audio chunk to buffer with backpressure."""
         if self._running:
             self.buffer.append(audio_bytes)
-            #await asyncio.sleep(0.0002)
+            await asyncio.sleep(0.0002)
 
     async def start_pacing(self, on_audio_chunk, context):
         """Start real-time pacing task."""
@@ -38,14 +38,14 @@ class AudioPacer:
     async def _pace_loop(self):
         """Send buffered chunks at real-time intervals."""
         while self._running:
-            if len(self.buffer) > 0:
+            if len(self.buffer) > 1:
                 chunk = self.buffer.popleft()
                 duration = len(chunk) / 8000.0
                 duration *= 0.98  # Slightly faster than real-time
                 await self.on_audio_chunk(chunk, context=self.context)
                 await asyncio.sleep(duration)
             else:
-                await asyncio.sleep(0.025)
+                await asyncio.sleep(0.1)
 
     async def stop(self):
         """Stop pacing and clear buffer."""
