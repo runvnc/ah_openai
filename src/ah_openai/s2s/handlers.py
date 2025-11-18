@@ -34,7 +34,7 @@ class AudioPacer:
         self.context = context
         self._running = True
         # a little more time for the second chunk to arrive
-        await asyncio.sleep(0.12)
+        await asyncio.sleep(0.64)
         self.pacer_task = asyncio.create_task(self._pace_loop())
 
     async def _pace_loop(self):
@@ -43,7 +43,7 @@ class AudioPacer:
             if len(self.buffer) > 0:
                 chunk = self.buffer.popleft()
                 duration = len(chunk) / 8000.0
-                duration *= 0.9999  # Slightly faster than real-time
+                #duration *= 0.9999  # Slightly faster than real-time
                 await self.on_audio_chunk(chunk, context=self.context)
                 await asyncio.sleep(duration)
             else:
