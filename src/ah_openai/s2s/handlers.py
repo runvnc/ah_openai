@@ -41,6 +41,7 @@ class AudioPacer:
         
         # Wait for initial buffer to build up
         # This prevents underruns at the start
+        initial_buffer_time = 0.1  # 100ms initial buffer
         initial_buffer_time = 3.3  # 300ms initial buffer - increased to reduce clicks/pops
         await asyncio.sleep(initial_buffer_time)
         
