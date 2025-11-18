@@ -33,19 +33,21 @@ class AudioPacer:
         self.on_audio_chunk = on_audio_chunk
         self.context = context
         self._running = True
+        # a little more time for the second chunk to arrive
+        await asyncio.sleep(0.04)
         self.pacer_task = asyncio.create_task(self._pace_loop())
 
     async def _pace_loop(self):
         """Send buffered chunks at real-time intervals."""
         while self._running:
-            if len(self.buffer) > 1:
+            if len(self.buffer) > 0:
                 chunk = self.buffer.popleft()
                 duration = len(chunk) / 8000.0
-                duration *= 0.98  # Slightly faster than real-time
+                #duration *= 0.99  # Slightly faster than real-time
                 await self.on_audio_chunk(chunk, context=self.context)
                 await asyncio.sleep(duration)
             else:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.05)
 
     async def stop(self):
         """Stop pacing and clear buffer."""
@@ -125,6 +127,7 @@ async def handle_transcript(server_event, on_transcript, context):
             if role == 'assistant' and content_item.get('type') == 'output_audio':
                 if 'transcript' in content_item:
                     transcript = content_item['transcript']
+                    # I think this means done outputting AI response audio
                     break
             elif role == 'user':
                 if 'transcript' in content_item:
@@ -170,15 +173,10 @@ async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on
     """Background task to handle incoming WebSocket messages"""
     try:
         session_id = context.log_id
-        if session_id not in _audio_pacers:
-            pacer = AudioPacer()
-            await pacer.start_pacing(on_audio_chunk, context)
-            _audio_pacers[session_id] = pacer
-            logger.info(f'Started audio pacer for session {session_id}')
         async for message in ws:
             server_event = json.loads(message)
             await handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context)
-            await asyncio.sleep(0.0025)
+            await asyncio.sleep(0.000025)
 
     except websockets.exceptions.ConnectionClosed:
         logger.info(f'WebSocket connection closed for {context.log_id}')
