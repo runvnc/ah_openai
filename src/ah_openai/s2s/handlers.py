@@ -21,6 +21,11 @@ class AudioPacer:
         self.on_audio_chunk = None
         self.context = None
         self._running = False
+        
+        # Absolute timing for precise pacing
+        self.start_time = None
+        self.bytes_sent = 0
+        self.playback_rate = 1.0  # Real-time playback (configurable)
 
     async def add_chunk(self, audio_bytes):
         """Add audio chunk to buffer with backpressure."""
@@ -33,21 +38,50 @@ class AudioPacer:
         self.on_audio_chunk = on_audio_chunk
         self.context = context
         self._running = True
-        # a little more time for the second chunk to arrive
-        await asyncio.sleep(0.64)
+        
+        # Wait for initial buffer to build up
+        # This prevents underruns at the start
+        initial_buffer_time = 0.1  # 100ms initial buffer
+        await asyncio.sleep(initial_buffer_time)
+        
+        # Record absolute start time
+        self.start_time = time.perf_counter()
+        self.bytes_sent = 0
+        
         self.pacer_task = asyncio.create_task(self._pace_loop())
 
     async def _pace_loop(self):
-        """Send buffered chunks at real-time intervals."""
+        """Send buffered chunks at real-time intervals using absolute timing.
+        
+        This prevents drift and maintains consistent playback speed by calculating
+        the target time based on total bytes sent, not accumulated sleep durations.
+        """
         while self._running:
             if len(self.buffer) > 0:
                 chunk = self.buffer.popleft()
-                duration = len(chunk) / 8000.0
-                duration *= 0.7  # Slightly faster than real-time
+                
+                # Send the chunk
                 await self.on_audio_chunk(chunk, context=self.context)
-                await asyncio.sleep(duration)
+                
+                # Update bytes sent counter
+                self.bytes_sent += len(chunk)
+                
+                # Calculate target time based on total bytes sent
+                # At 8000 Hz, each byte = 1/8000 seconds
+                target_time = self.start_time + (self.bytes_sent / 8000.0) * self.playback_rate
+                
+                # Calculate how long to sleep to hit target time
+                current_time = time.perf_counter()
+                sleep_duration = target_time - current_time
+                
+                # Sleep if we're ahead of schedule
+                if sleep_duration > 0:
+                    await asyncio.sleep(sleep_duration)
+                # If we're behind schedule (sleep_duration < 0), don't sleep - catch up
+                
             else:
-                await asyncio.sleep(0.005)
+                # No data in buffer, short sleep
+                await asyncio.sleep(0.01)
 
     async def stop(self):
         """Stop pacing and clear buffer."""
