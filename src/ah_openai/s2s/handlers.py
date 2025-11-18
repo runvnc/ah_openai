@@ -74,9 +74,11 @@ class AudioPacer:
                 if self.audio_start_time:
                     # Calculate when this chunk should start playing
                     chunk_timestamp = self.audio_start_time + (self.bytes_sent / 8000.0)
+                    print(f"[AUDIOPACER] Calling on_audio_chunk with {len(chunk)} bytes, timestamp={chunk_timestamp}")
                     await self.on_audio_chunk(chunk, timestamp=chunk_timestamp, context=self.context)
                 else:
                     # Fallback if no start time (shouldn't happen)
+                    print(f"[AUDIOPACER] Calling on_audio_chunk with {len(chunk)} bytes, NO timestamp")
                     await self.on_audio_chunk(chunk, context=self.context)
                 
                 # Update bytes sent counter
