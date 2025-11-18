@@ -41,11 +41,11 @@ class AudioPacer:
             if len(self.buffer) > 0:
                 chunk = self.buffer.popleft()
                 duration = len(chunk) / 8000.0
-                duration *= 0.95  # Slightly faster than real-time
+                duration *= 0.98  # Slightly faster than real-time
                 await self.on_audio_chunk(chunk, context=self.context)
                 await asyncio.sleep(duration)
             else:
-                await asyncio.sleep(0.075)
+                await asyncio.sleep(0.10)
 
     async def stop(self):
         """Stop pacing and clear buffer."""
@@ -179,6 +179,7 @@ async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on
             server_event = json.loads(message)
             await handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context)
             await asyncio.sleep(0.0025)
+
     except websockets.exceptions.ConnectionClosed:
         logger.info(f'WebSocket connection closed for {context.log_id}')
     except Exception as e:
