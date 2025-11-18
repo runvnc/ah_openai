@@ -31,7 +31,7 @@ class AudioPacer:
         """Add audio chunk to buffer with backpressure."""
         if self._running:
             self.buffer.append(audio_bytes)
-            await asyncio.sleep(0.0002)
+            #await asyncio.sleep(0.0002)
 
     async def start_pacing(self, on_audio_chunk, context):
         """Start real-time pacing task."""
@@ -210,7 +210,7 @@ async def message_handler_loop(ws, on_command, on_audio_chunk, on_transcript, on
         async for message in ws:
             server_event = json.loads(message)
             await handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context)
-            await asyncio.sleep(0.000025)
+            #await asyncio.sleep(0.000025)
 
     except websockets.exceptions.ConnectionClosed:
         logger.info(f'WebSocket connection closed for {context.log_id}')
