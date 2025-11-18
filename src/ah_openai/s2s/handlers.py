@@ -43,11 +43,11 @@ class AudioPacer:
             if len(self.buffer) > 0:
                 chunk = self.buffer.popleft()
                 duration = len(chunk) / 8000.0
-                #duration *= 0.9999  # Slightly faster than real-time
+                duration *= 0.7  # Slightly faster than real-time
                 await self.on_audio_chunk(chunk, context=self.context)
                 await asyncio.sleep(duration)
             else:
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.005)
 
     async def stop(self):
         """Stop pacing and clear buffer."""
