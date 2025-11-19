@@ -31,6 +31,29 @@ But primary you use audible audio output of speech to the user.
 
 {% endblock %}
 
+{% block command_reminder_2 %}
+
+  {% if 'realtime' in agent['stream_chat'] %}
+...
+  {% else %}
+    {{ parent_command_reasoning_reminder_2 }}
+
+{% endif %}
+
+{% endblock %}
+
+{% block reasoning_reminder %}
+
+  {% if 'realtime' in agent['stream_chat'] %}
+...
+  {% else %}
+    {{ parent_reasoning_reminder }}
+
+{% endif %}
+
+{% endblock %}
+
+
 {% block reasoning_reminder_3 %}
 
   {% if 'realtime' in agent['stream_chat'] %}
@@ -40,6 +63,7 @@ Again, primary output is audio. The above instructions related to
 commands do not override this, they are only applicable when
 you need to use commands. When you _need_ to use commandsm, can use normal function calls (preferred)
 in text output, or go through the output() function with escaped JSON if you wish.
+You never communite with the user using commands, only audio.
 
   {% else %}
     {{ parent_reasoning_reminder_3 }}
@@ -47,5 +71,7 @@ in text output, or go through the output() function with escaped JSON if you wis
 {% endif %}
 
 {% endblock %}
+
+
 
 
