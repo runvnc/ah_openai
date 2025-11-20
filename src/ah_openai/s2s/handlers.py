@@ -28,6 +28,7 @@ class AudioPacer:
         self.audio_start_time = None  # When first audio chunk received
         self.total_bytes_received = 0  # Total bytes received from OpenAI
         self.playback_rate = 1.0  # Real-time playback (configurable)
+        self._finished = False
 
     async def add_chunk(self, audio_bytes):
         """Add audio chunk to buffer with backpressure."""
@@ -99,6 +100,8 @@ class AudioPacer:
                 
             else:
                 # No data in buffer, short sleep
+                if self._finished:
+                    break
                 await asyncio.sleep(0.01)
 
     async def stop(self):
@@ -111,6 +114,10 @@ class AudioPacer:
             except asyncio.CancelledError:
                 pass
         self.buffer.clear()
+
+    def finish(self):
+        """Mark pacing as finished, will stop when buffer is empty."""
+        self._finished = True
 
 async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
     """Handle incoming audio delta from OpenAI"""
@@ -201,6 +208,11 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         event_type = server_event['type']
         if event_type == 'response.output_audio.delta':
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
+        elif event_type == 'response.output_audio.done':
+            if context and context.log_id in _audio_pacers:
+                logger.info(f'Audio generation done for {context.log_id}, finishing pacer')
+                _audio_pacers[context.log_id].finish()
+                del _audio_pacers[context.log_id]
         elif event_type == 'conversation.item.input_audio_transcription.completed':
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == 'input_audio_buffer.speech_started':

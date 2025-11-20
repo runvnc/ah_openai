@@ -67,12 +67,11 @@ async def send_s2s_message(message, context=None):
 
 @service()
 async def send_s2s_audio_chunk(audio_bytes, context=None):
-    """
-    Send an audio chunk to OpenAI for processing.
-    
+    """Send an audio chunk to OpenAI for processing.
+
     Args:
         audio_bytes: Audio data in ulaw format (from PySIP)
-        context: MindRoot context with log_id
+        context:     MindRoot context with log_id
     """
     ws = connection.get_socket(context.log_id)
     await connection.send_audio_chunk(ws, audio_bytes, context)
