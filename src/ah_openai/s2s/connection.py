@@ -96,7 +96,7 @@ async def initialize_session(ws, system_prompt, voice):
                         "type": "server_vad",
                         "threshold": 0.5,
                         "prefix_padding_ms": 300,
-                        "silence_duration_ms": 350,
+                        "silence_duration_ms": 375,
                         "create_response": True,
                         "interrupt_response": True
                     }

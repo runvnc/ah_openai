@@ -9,115 +9,9 @@ import logging
 import websockets
 from collections import deque
 import time
+from .audio_pacer import AudioPacer
 logger = logging.getLogger(__name__)
 _audio_pacers = {}
-
-class AudioPacer:
-    """Paces audio chunks to real-time speed with small buffer."""
-
-    def __init__(self):
-        self.buffer = deque()
-        self.pacer_task = None
-        self.on_audio_chunk = None
-        self.context = None
-        self._running = False
-        
-        # Absolute timing for precise pacing
-        self.start_time = None
-        self.bytes_sent = 0
-        self.audio_start_time = None  # When first audio chunk received
-        self.total_bytes_received = 0  # Total bytes received from OpenAI
-        self.playback_rate = 1.0  # Real-time playback (configurable)
-        self._finished = False
-
-    async def add_chunk(self, audio_bytes):
-        """Add audio chunk to buffer with backpressure."""
-        if self._running:
-            self.buffer.append(audio_bytes)
-            #await asyncio.sleep(0.0002)
-            
-            # Track when first audio arrives
-            if self.audio_start_time is None:
-                self.audio_start_time = time.perf_counter()
-            
-            self.total_bytes_received += len(audio_bytes)
-
-    async def start_pacing(self, on_audio_chunk, context):
-        """Start real-time pacing task."""
-        self.on_audio_chunk = on_audio_chunk
-        self.context = context
-        self._running = True
-        
-        # Wait for initial buffer to build up
-        # This prevents underruns at the start
-        initial_buffer_time = 0.04  # 100ms initial buffer
-        await asyncio.sleep(initial_buffer_time)
-        
-        # Record absolute start time
-        self.start_time = time.perf_counter()
-        self.bytes_sent = 0
-        
-        self.pacer_task = asyncio.create_task(self._pace_loop())
-
-    async def _pace_loop(self):
-        """Send buffered chunks at real-time intervals using absolute timing.
-        
-        This prevents drift and maintains consistent playback speed by calculating
-        the target time based on total bytes sent, not accumulated sleep durations.
-        """
-        while self._running:
-            if len(self.buffer) > 0:
-                chunk = self.buffer.popleft()
-                
-                # Send the chunk
-                # Calculate timestamp for this chunk based on when it should play
-                # Timestamp is relative to when first audio was received
-                if self.audio_start_time:
-                    # Calculate when this chunk should start playing
-                    chunk_timestamp = self.audio_start_time + (self.bytes_sent / 8000.0)
-                    print(f"[AUDIOPACER] Calling on_audio_chunk with {len(chunk)} bytes, timestamp={chunk_timestamp}")
-                    await self.on_audio_chunk(chunk, timestamp=chunk_timestamp, context=self.context)
-                else:
-                    # Fallback if no start time (shouldn't happen)
-                    print(f"[AUDIOPACER] Calling on_audio_chunk with {len(chunk)} bytes, NO timestamp")
-                    await self.on_audio_chunk(chunk, context=self.context)
-                
-                # Update bytes sent counter
-                self.bytes_sent += len(chunk)
-                
-                # Calculate target time based on total bytes sent
-                # At 8000 Hz, each byte = 1/8000 seconds
-                target_time = self.start_time + (self.bytes_sent / 8000.0) * self.playback_rate
-                
-                # Calculate how long to sleep to hit target time
-                current_time = time.perf_counter()
-                sleep_duration = target_time - current_time
-                
-                # Sleep if we're ahead of schedule
-                if sleep_duration > 0:
-                    await asyncio.sleep(sleep_duration)
-                # If we're behind schedule (sleep_duration < 0), don't sleep - catch up
-                
-            else:
-                # No data in buffer, short sleep
-                if self._finished:
-                    break
-                await asyncio.sleep(0.01)
-
-    async def stop(self):
-        """Stop pacing and clear buffer."""
-        self._running = False
-        if self.pacer_task:
-            self.pacer_task.cancel()
-            try:
-                await self.pacer_task
-            except asyncio.CancelledError:
-                pass
-        self.buffer.clear()
-
-    def finish(self):
-        """Mark pacing as finished, will stop when buffer is empty."""
-        self._finished = True
 
 async def handle_audio_delta(server_event, on_audio_chunk, play_local, context):
     """Handle incoming audio delta from OpenAI"""
@@ -210,16 +104,17 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
         elif event_type == 'response.output_audio.done':
             if context and context.log_id in _audio_pacers:
-                logger.info(f'Audio generation done for {context.log_id}, finishing pacer')
-                _audio_pacers[context.log_id].finish()
-                del _audio_pacers[context.log_id]
+                # Do NOT delete the pacer. Keep it alive for the next turn.
+                # This prevents race conditions where a new pacer starts before the old one finishes.
+                logger.info(f'Audio generation done for {context.log_id}, pacer waiting for next turn')
+                pass
         elif event_type == 'conversation.item.input_audio_transcription.completed':
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == 'input_audio_buffer.speech_started':
             if context and context.log_id in _audio_pacers:
-                logger.info(f'Interrupt detected - stopping audio pacer for {context.log_id}')
-                await _audio_pacers[context.log_id].stop()
-                del _audio_pacers[context.log_id]
+                logger.info(f'Interrupt detected - clearing audio pacer for {context.log_id}')
+                # Clear the buffer but keep the pacer alive
+                await _audio_pacers[context.log_id].clear()
             await on_interrupt(server_event)
         elif event_type == 'conversation.item.done':
             item = server_event['item']
