@@ -102,19 +102,6 @@ class AudioPacer:
                 
                 # Calculate how long to sleep to hit target time
                 current_time = time.perf_counter()
-
-                # Check for "Time Travel" (Gap Detection)
-                # If we are significantly behind schedule (>200ms), it means the buffer ran dry
-                # and we paused. We must reset the clock to avoid bursting.
-                drift = current_time - target_time
-                if drift > 0.2:
-                    # logger.debug(f"[AUDIOPACER] Gap detected ({drift:.4f}s). Resyncing clocks.")
-                    self.start_time += drift
-                    if self.audio_start_time:
-                        self.audio_start_time += drift
-                    # Recalculate target with new start time
-                    target_time = self.start_time + (self.bytes_sent / 8000.0) * self.playback_rate
-
                 sleep_duration = target_time - current_time
                 
                 # Sleep if we're ahead of schedule
