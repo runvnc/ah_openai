@@ -17,6 +17,8 @@ _timing_log_file = None
 _session_timings = {}  # Track per-session timing data
 _first_audio_delta_logged = {}  # Track if we've logged first audio delta per response
 
+_last_ai_audio_done_time = {}  # Track when AI audio finished per session
+
 def _log_timing(event_type, context, extra=""):
     """Log timing event to instrumentation file."""
     global _timing_log_file
@@ -132,6 +134,8 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             # Reset first audio delta flag for next response
             if context and context.log_id in _first_audio_delta_logged:
                 _first_audio_delta_logged[context.log_id] = False
+            # Track when AI audio finished
+            _last_ai_audio_done_time[context.log_id] = time.perf_counter()
             _log_timing("AI_AUDIO_DONE", context)
             if context and context.log_id in _audio_pacers:
                 # Mark response done so pacer resets timing for next response
@@ -143,7 +147,18 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             _log_timing("USER_TRANSCRIPT_COMPLETE", context, f"transcript={transcript}...")
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == 'input_audio_buffer.speech_started':
-            _log_timing("USER_SPEECH_STARTED", context, "(interrupt)")
+            # Determine if this is a true interrupt or normal turn
+            session_id = context.log_id if context else None
+            pacer_has_audio = False
+            time_since_ai_done = None
+            if session_id and session_id in _audio_pacers:
+                pacer_has_audio = len(_audio_pacers[session_id].buffer) > 0
+            if session_id and session_id in _last_ai_audio_done_time:
+                time_since_ai_done = time.perf_counter() - _last_ai_audio_done_time[session_id]
+            
+            turn_type = "INTERRUPT" if pacer_has_audio else "NORMAL"
+            extra = f"type={turn_type}, pacer_has_audio={pacer_has_audio}, time_since_ai_done={time_since_ai_done:.3f}s" if time_since_ai_done else f"type={turn_type}, pacer_has_audio={pacer_has_audio}, time_since_ai_done=None"
+            _log_timing("USER_SPEECH_STARTED", context, extra)
             if context and context.log_id in _audio_pacers:
                 logger.info(f'Interrupt detected - clearing audio pacer for {context.log_id}')
                 # Clear the buffer but keep the pacer alive
