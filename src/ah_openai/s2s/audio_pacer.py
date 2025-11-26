@@ -29,10 +29,20 @@ class AudioPacer:
         self.bytes_sent = 0
         self.audio_start_time = None  # When first audio chunk of CURRENT response received
         self.playback_rate = 1.0  # Real-time playback (configurable)
+        self._response_done = False  # Flag to track if previous response completed
 
     async def add_chunk(self, audio_bytes):
         """Add audio chunk to buffer."""
         if self._running:
+            # Reset timing if previous response finished
+            # This ensures each new response starts with fresh timing
+            if self._response_done:
+                self.bytes_sent = 0
+                self.start_time = time.perf_counter()
+                self.audio_start_time = None
+                self._response_done = False
+                logger.info("AudioPacer reset for new response")
+            
             self.buffer.append(audio_bytes)
             
             # Track when first audio of this sequence arrives
@@ -51,7 +61,17 @@ class AudioPacer:
         self.bytes_sent = 0
         # Reset pacing clock to now so we don't try to catch up to the past
         self.start_time = time.perf_counter()
+        self._response_done = False  # Clear flag since we're resetting anyway
         logger.info("AudioPacer cleared and reset")
+
+    def mark_response_done(self):
+        """Mark that the current response has finished generating.
+        
+        Called when response.output_audio.done is received from OpenAI.
+        The next add_chunk() call will reset timing for the new response.
+        """
+        self._response_done = True
+        logger.debug("AudioPacer marked response done")
 
     async def start_pacing(self, on_audio_chunk, context):
         """Start real-time pacing task."""

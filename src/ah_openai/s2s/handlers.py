@@ -104,10 +104,10 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
         elif event_type == 'response.output_audio.done':
             if context and context.log_id in _audio_pacers:
-                # Do NOT delete the pacer. Keep it alive for the next turn.
-                # This prevents race conditions where a new pacer starts before the old one finishes.
-                logger.info(f'Audio generation done for {context.log_id}, pacer waiting for next turn')
-                pass
+                # Mark response done so pacer resets timing for next response
+                # This fixes latency drift between normal turns vs interruptions
+                _audio_pacers[context.log_id].mark_response_done()
+                logger.info(f'Audio generation done for {context.log_id}, marked for timing reset')
         elif event_type == 'conversation.item.input_audio_transcription.completed':
             await handle_transcript(server_event, on_transcript, context)
         elif event_type == 'input_audio_buffer.speech_started':
