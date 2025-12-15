@@ -136,6 +136,9 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
         elif model_name.startswith('gpt-5.2'):
             messages[0]['role'] = "developer"
             response_format = { "type": "text"}
+            if reasoning_effort == "off":
+                reasoning_effort = "none"
+ 
             #max_tokens = 20000
             temperature = 1
             reasoning_effort = context.agent.get('thinking_level')
