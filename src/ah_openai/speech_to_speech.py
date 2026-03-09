@@ -40,7 +40,7 @@ async def start_s2s(model=None, system_prompt='', on_command=None, on_audio_chun
         None (connection stored globally by log_id)
     """
     if model is None:
-        model = 'gpt-realtime'
+        model = 'gpt-realtime-1.5'
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     if not OPENAI_API_KEY:
         raise Exception('OPENAI_API_KEY environment variable not set')
