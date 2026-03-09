@@ -67,7 +67,7 @@ async def handle_function_call(item, on_command, context):
     """Handle function call from OpenAI"""
     try:
         arguments = json.loads(item['arguments'])
-        print("arguments:", arguments)
+        # print("arguments:", arguments)
         if item['name'] != 'output':
             cmd_name = item['name']
             args = json.loads(item['arguments'])
@@ -128,7 +128,7 @@ async def handle_transcript(server_event, on_transcript, context):
 async def handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context):
     """Handle a single message from OpenAI"""
     try:
-        print(server_event)
+        #print(server_event)
         event_type = server_event['type']
         if event_type == 'response.output_audio.delta':
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
@@ -189,7 +189,7 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
                         # we have to do this because sometimes the transcript is json with command output, but sometimes it's just text
                         if 'transcript' in content_item:
                             transcript = content_item['transcript']
-                            print("trying to parse transcript as function?")
+                            # print("trying to parse transcript as function?")
                             try:
                                 out = json.loads(transcript)
                                 if isinstance(out, dict) and 'output' in out and 'text' in out['output']:
