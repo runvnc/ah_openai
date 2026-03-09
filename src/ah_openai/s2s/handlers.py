@@ -172,12 +172,43 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             _log_timing("AI_RESPONSE_CREATED", context)
         elif event_type == 'response.output_audio.started':
             _log_timing("AI_AUDIO_STARTED", context)
+        elif event_type = 'response.output_item.done':
         elif event_type == 'conversation.item.done':
             item = server_event['item']
             if item['type'] == 'function_call':
                 await handle_function_call(item, on_command, context)
             elif item['type'] == 'message':
-                await handle_transcript(server_event, on_transcript, context)
+                # try to parse transcript as json
+                # full example:
+                # Mar 09 15:39:01 mr-host-million python[3012741]: {'type': 'conversation.item.done', 'event_id': 'event_DHbfRDe3vkSafbcvEQsjB', 'previous_item_id': 'item_DHbfPsIgt4wCGlgo3hsQH', 'item': {'id': 'item_DHbfPB1YwJLREmdXWAAQb', 'type': 'message', 'status': 'completed', 'role': 'assistant', 'content': [{'type': 'output_audio', 'transcript': '[{"output": {"text": "[ { \\"call\\": { \\"destination\\": \\"682 262 5850\\" } } ]"}}'}]}}
+                # we need to safely parse anot blow up if it's not json
+                try:
+                    content = item.get('content', [])
+                    found_function_call = False       
+                    for content_item in content:
+                        # try to parse trasncript as json, if it fails just log the raw transcript
+                        # we have to do this because sometimes the transcript is json with command output, but sometimes it's just text
+                        if 'transcript' in content_item:
+                            transcript = content_item['transcript']
+                            print("trying to parse transcript as function?")
+                            try:
+                                out = json.loads(transcript)
+                                if isinstance(out, dict) and 'output' in out and 'text' in out['output']:
+                                    cmd_output = out['output']['text']
+                                    cmdlist = json.loads(cmd_output)
+                                    # looks something like "[ { \\"call\\": { \\"destination\\": \\"682 262 5850\\" } } ]"}}
+                                    # so we need to parse the text field as json again to get the actual command output
+                                    cmd_obj = json.loads(cmdlist)
+                                    await on_command(cmd_obj, context=context)
+                                    found_function_call = True
+                            except Exception as e:
+                                pass
+                except Exception as e:
+                    pass
+                if not found_function_call:
+                    await handle_transcript(server_event, on_transcript, context)
+                    found_function_call = False
+ 
         else:
             logger.debug(f'Received message: {json.dumps(server_event, indent=2)}')
     except Exception as e:
