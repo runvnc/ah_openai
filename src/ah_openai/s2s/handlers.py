@@ -67,7 +67,7 @@ async def handle_function_call(item, on_command, context):
     """Handle function call from OpenAI"""
     try:
         arguments = json.loads(item['arguments'])
-        console.log("arguments:", arguments)
+        print("arguments:", arguments)
         if item['name'] != 'output':
             cmd_name = item['name']
             args = json.loads(item['arguments'])
