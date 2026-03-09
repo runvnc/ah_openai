@@ -172,7 +172,6 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
             _log_timing("AI_RESPONSE_CREATED", context)
         elif event_type == 'response.output_audio.started':
             _log_timing("AI_AUDIO_STARTED", context)
-        elif event_type = 'response.output_item.done':
         elif event_type == 'conversation.item.done':
             item = server_event['item']
             if item['type'] == 'function_call':
