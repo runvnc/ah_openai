@@ -128,6 +128,7 @@ async def handle_transcript(server_event, on_transcript, context):
 async def handle_message(server_event, on_command, on_audio_chunk, on_transcript, on_interrupt, play_local, context):
     """Handle a single message from OpenAI"""
     try:
+        print(server_event)
         event_type = server_event['type']
         if event_type == 'response.output_audio.delta':
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
