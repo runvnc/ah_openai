@@ -125,7 +125,7 @@ async def stream_chat(model, messages=[], context=None, num_ctx=200000,
             else:
                 reasoning_effort = "medium"
  
-        elif model_name.startswith('gpt-5.1'):
+        elif model_name.startswith('gpt-5.'):
             messages[0]['role'] = "developer"
             response_format = { "type": "text"}
             #max_tokens = 20000
