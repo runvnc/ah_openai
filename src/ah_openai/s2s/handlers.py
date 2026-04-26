@@ -133,6 +133,12 @@ async def handle_message(server_event, on_command, on_audio_chunk, on_transcript
         if event_type == 'response.output_audio.delta':
             await handle_audio_delta(server_event, on_audio_chunk, play_local, context)
         elif event_type == 'response.output_audio.done':
+            # S2S/SIP compatibility note: OpenAI realtime has explicit
+            # response.output_audio.started/done events, but the current SIP
+            # bridge intentionally remains backward-compatible by routing deltas
+            # through sip_audio_out_chunk() only.  Do not make mr_sip explicit
+            # sip_start/end_audio_response mandatory unless this S2S path and
+            # the PySIP process-isolation proxy/wrapper are updated together.
             # Reset first audio delta flag for next response
             if context and context.log_id in _first_audio_delta_logged:
                 _first_audio_delta_logged[context.log_id] = False
